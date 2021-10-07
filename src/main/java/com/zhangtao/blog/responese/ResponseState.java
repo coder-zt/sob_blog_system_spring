@@ -2,6 +2,7 @@ package com.zhangtao.blog.responese;
 
 public enum ResponseState {
     SUCCESS(2000, true, "操作成功"),
+    REGISTER_SUCCESS(2001, true, "注册成功"),
     FAILED(4000, false, "操作失败");
 
     int code;

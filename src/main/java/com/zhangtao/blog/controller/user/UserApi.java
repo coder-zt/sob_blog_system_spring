@@ -7,6 +7,7 @@ import com.wf.captcha.base.Captcha;
 import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IUserService;
+import com.zhangtao.blog.services.impl.UserServiceImpl;
 import com.zhangtao.blog.utils.Constants;
 import com.zhangtao.blog.utils.RedisUtils;
 import com.zhangtao.blog.utils.TextUtils;
@@ -64,19 +65,12 @@ public class UserApi {
      * @return
      */
     @PostMapping
-    public ResponseResult register(@RequestBody SobUser sobUser){
-        //第一步：检查当前用户名是否已经注册
-        //第二步：检查邮箱格式是否正确
-        //第三步：检查该邮箱是否已经注册
-        //第四步：检查邮箱验证码是否正确
-        //第五步：检查图灵验证码是否正确
-        //达到可以注册的条件
-        //第六步：对密码进行加密
-        //第七步：补全数据
-        //包括：注册IP,登录IP,角色,头像,创建时间,更新时间
-        //第八步：保存到数据库中
-        //第九步：返回结果
-        return null;
+    public ResponseResult register(@RequestBody SobUser sobUser,
+                                   @RequestParam("verify_code") String emailCode
+            , @RequestParam("captcha_code") String captchaCode,
+                                   @RequestParam("captcha_key") String captchaKey,
+                                   HttpServletRequest request){
+        return userService.register(sobUser, emailCode, captchaCode, captchaKey,request);
     }
 
     /**
@@ -107,12 +101,17 @@ public class UserApi {
     /**
      * 发送邮件email
      *
+     * 使用场景：
+     *      注册：邮箱已经注册过来需要提示已注册
+     *      修改邮箱（新的邮箱）：邮箱已经注册过来需要提示已注册
+     *      找回密码：如果邮箱地址不存在则提示为注册该邮箱
+     *
      * @return
      */
     @GetMapping("/verify_code")
-    public ResponseResult sendVerifyCode(HttpServletRequest request, @RequestParam("email")  String emailAddress){
+    public ResponseResult sendVerifyCode(HttpServletRequest request,@RequestParam("type") String type, @RequestParam("email")  String emailAddress){
         log.info("email address ===> " + emailAddress);
-        return userService.sendEmail(request, emailAddress);
+        return userService.sendEmail(request, type, emailAddress);
     }
 
     /**

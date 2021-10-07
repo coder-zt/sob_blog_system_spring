@@ -5,7 +5,8 @@ public interface Constants {
     int DEFAULT_SIZE = 30;
     interface User{
         String ROLE_ADMIN = "roleAdmin";
-        String DEFAULT_AVATAR = "roleAdmin";
+        String ROLE_NORMAL = "roleNormal";
+        String DEFAULT_AVATAR = "https://imgs.sunofbeaches.com/group1/M00/00/0E/rBsADV4c3lOAe3XQAAARPTB-zes803.png";
         String DEFAULT_STATE = "1";
         String KEY_REDIS_CAPTCHA = "key_redis_captcha_";
         String KEY_EMAIL_SEND_IP = "key_email_send_ip_";

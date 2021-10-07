@@ -5,8 +5,6 @@ import com.zhangtao.blog.responese.ResponseResult;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.awt.*;
-import java.io.IOException;
 
 public interface IUserService {
 
@@ -14,5 +12,7 @@ public interface IUserService {
 
     void createCaptcha(HttpServletResponse response, String captchaKey)  throws Exception;
 
-    ResponseResult sendEmail(HttpServletRequest request, String emailAddress);
+    ResponseResult sendEmail(HttpServletRequest request,String type,  String emailAddress);
+
+    ResponseResult register(SobUser sobUser, String emailCode, String captchaCode, String captchaKey, HttpServletRequest request);
 }

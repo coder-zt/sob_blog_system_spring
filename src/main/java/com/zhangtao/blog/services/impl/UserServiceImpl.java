@@ -9,6 +9,7 @@ import com.zhangtao.blog.dao.UserDao;
 import com.zhangtao.blog.pojo.Settings;
 import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
+import com.zhangtao.blog.responese.ResponseState;
 import com.zhangtao.blog.services.IUserService;
 import com.zhangtao.blog.utils.*;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +20,6 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
-import java.awt.*;
-import java.io.IOException;
 import java.util.Date;
 import java.util.Random;
 
@@ -157,12 +156,32 @@ public class UserServiceImpl implements IUserService {
 
     /**
      * 发送邮件验证码
+     *
+     *  * 使用场景：
+     *      *      注册(register)：邮箱已经注册过来需要提示已注册
+     *      *      修改邮箱（新的邮箱）(update)：邮箱已经注册过来需要提示已注册
+     *      *      找回密码(forget)：如果邮箱地址不存在则提示为注册该邮箱
      * @param request
      * @param emailAddress
      * @return
      */
     @Override
-    public ResponseResult sendEmail(HttpServletRequest request, String emailAddress) {
+    public ResponseResult sendEmail(HttpServletRequest request,String type, String emailAddress) {
+        if (TextUtils.isEmpty(emailAddress)) {
+            return ResponseResult.FAILED("邮箱地址不可以为空!");
+        }
+        //根据类型查询邮箱是否存在
+        if("register".equals(type) || "forget".equals(type)){
+            SobUser userByEmail = userDao.findOneByEmail(emailAddress);
+            if (userByEmail != null) {
+                return ResponseResult.FAILED("该邮箱地址已注册!");
+            }
+        }else{
+            SobUser userByEmail = userDao.findOneByEmail(emailAddress);
+            if (userByEmail == null) {
+                return ResponseResult.FAILED("该邮箱地未注册!");
+            }
+        }
         // 1、防止暴力发送：同一个邮箱，间隔30s发一次，同一个IP，1个小时内最多只能发送10次
         String remoteAddress = request.getRemoteAddr();
         remoteAddress = remoteAddress.replaceAll(":", "_");
@@ -179,7 +198,7 @@ public class UserServiceImpl implements IUserService {
         // 2、检查邮箱地址是否正确
         boolean isEmailAddressOk = TextUtils.isEmailAddressOk(emailAddress);
         if (!isEmailAddressOk) {
-            return ResponseResult.FAILED("邮箱错误!");
+            return ResponseResult.FAILED("邮箱地址错误!");
         }
         // 3、发送验证码,6位数：100000~999999
         int code = random.nextInt(999999);
@@ -203,5 +222,79 @@ public class UserServiceImpl implements IUserService {
         redisUtils.set(Constants.User.KEY_EMAIL_SEND_ADDRESS + emailAddress, "true", 30);
         redisUtils.set(Constants.User.KEY_EMAIL_CODE_CONTENT + emailAddress, String.valueOf(code), 60 * 10);
         return ResponseResult.SUCCESS("操作成功!");
+    }
+
+    @Override
+    public ResponseResult register(SobUser sobUser, String emailCode, String captchaCode, String captchaKey, HttpServletRequest request) {
+        log.info("emailCode ===> " + emailCode);
+        log.info("captchaCode ===> " + captchaCode);
+        log.info("captchaKey ===> " + captchaKey);
+        //第一步：检查当前用户名是否已经注册
+        String userName = sobUser.getUserName();
+        if (TextUtils.isEmpty(userName)) {
+            return ResponseResult.FAILED("用户名不可以为空!");
+        }
+        SobUser userFromDbByUserName = userDao.findOneByUserName(userName);
+        if (userFromDbByUserName != null) {
+            return ResponseResult.FAILED("用户名已注册!");
+        }
+        //第二步：检查邮箱格式是否正确
+        String email = sobUser.getEmail();
+        if (TextUtils.isEmpty(email)) {
+            return ResponseResult.FAILED("邮箱地址不可以为空!");
+        }
+        boolean isEmailAddressOk = TextUtils.isEmailAddressOk(email);
+        if (!isEmailAddressOk) {
+            return ResponseResult.FAILED("邮箱地址错误!");
+        }
+        //第三步：检查该邮箱是否已经注册
+        SobUser userByEmail = userDao.findOneByEmail(email);
+        if (userByEmail != null) {
+            return ResponseResult.FAILED("邮箱地址已注册!");
+        }
+        //第四步：检查邮箱验证码是否正确
+        String emailVerifyCode = (String)redisUtils.get(Constants.User.KEY_EMAIL_CODE_CONTENT + email);
+        if (TextUtils.isEmpty(emailVerifyCode)) {
+            return ResponseResult.FAILED("邮箱验证码无效!");
+        }
+        if(!emailVerifyCode.equals(emailCode)){
+            return ResponseResult.FAILED("邮箱验证码错误!");
+        }else{
+            //正确，删除redis中的记录
+            redisUtils.del(Constants.User.KEY_EMAIL_CODE_CONTENT + email);
+        }
+        //第五步：检查图灵验证码是否正确
+        String captchaVerifyCode = (String)redisUtils.get(Constants.User.KEY_REDIS_CAPTCHA + captchaKey);
+        if (TextUtils.isEmpty(captchaVerifyCode)) {
+            return ResponseResult.FAILED("人类验证码无效!");
+        }
+        if(!captchaVerifyCode.equals(captchaCode)){
+            return ResponseResult.FAILED("人类验证码错误!");
+        }else{
+            //正确，删除redis中的记录
+            redisUtils.del(Constants.User.KEY_REDIS_CAPTCHA + captchaKey);
+        }
+        //达到可以注册的条件
+        //第六步：对密码进行加密
+        String password = sobUser.getPassword();
+        if (TextUtils.isEmpty(password)) {
+            return ResponseResult.FAILED("密码不可以为空!");
+        }
+        sobUser.setPassword(passwordEncoder.encode(password));
+        //第七步：补全数据
+        String ipAddress = request.getRemoteAddr();
+        sobUser.setRegIp(ipAddress);
+        sobUser.setLoginIp(ipAddress);
+        sobUser.setCreateTime(new Date());
+        sobUser.setUpdateTime(new Date());
+        sobUser.setAvatar(Constants.User.DEFAULT_AVATAR);
+        sobUser.setRoles(Constants.User.ROLE_NORMAL);
+        sobUser.setState("1");
+        sobUser.setId(idWorker.nextId() + "");
+        //包括：注册IP,登录IP,角色,头像,创建时间,更新时间
+        //第八步：保存到数据库中
+        userDao.save(sobUser);
+        //第九步：返回结果
+        return ResponseResult.GET(ResponseState.REGISTER_SUCCESS);
     }
 }
