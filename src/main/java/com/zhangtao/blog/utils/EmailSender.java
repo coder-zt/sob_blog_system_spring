@@ -302,4 +302,12 @@ public class EmailSender {
         bodyPart.setContent(html, "text/html; charset=utf-8");
         return bodyPart;
     }
+
+    public static void sendRegisterVerifyCode(String code, String address) throws Exception{
+        EmailSender.subject("博客系统注册验证码")
+                .from("博客系统")
+                .text("您的验证码是：" + code + " 有效期为10分钟，若非本人操作，请忽略此邮件。")
+                .to(address)
+                .send();
+    }
 }

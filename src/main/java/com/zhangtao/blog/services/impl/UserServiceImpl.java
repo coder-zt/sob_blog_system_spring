@@ -10,10 +10,7 @@ import com.zhangtao.blog.pojo.Settings;
 import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IUserService;
-import com.zhangtao.blog.utils.Constants;
-import com.zhangtao.blog.utils.IdWorker;
-import com.zhangtao.blog.utils.RedisUtils;
-import com.zhangtao.blog.utils.TextUtils;
+import com.zhangtao.blog.utils.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -153,5 +150,58 @@ public class UserServiceImpl implements IUserService {
         redisUtils.set(Constants.User.KEY_REDIS_CAPTCHA + key, content, 60 * 10);
         // 输出图片流
         targetCaptcha.out(response.getOutputStream());
+    }
+
+    @Autowired
+    private TaskService taskService;
+
+    /**
+     * 发送邮件验证码
+     * @param request
+     * @param emailAddress
+     * @return
+     */
+    @Override
+    public ResponseResult sendEmail(HttpServletRequest request, String emailAddress) {
+        // 1、防止暴力发送：同一个邮箱，间隔30s发一次，同一个IP，1个小时内最多只能发送10次
+        String remoteAddress = request.getRemoteAddr();
+        remoteAddress = remoteAddress.replaceAll(":", "_");
+        log.info("sendEmail > ip ===> " + remoteAddress);
+        //
+        Integer ipSendTime = (Integer)redisUtils.get(Constants.User.KEY_EMAIL_SEND_IP + remoteAddress);
+        if(ipSendTime != null && ipSendTime > 10){
+            return ResponseResult.FAILED("操作频繁!");
+        }
+        Object hasSend = redisUtils.get(Constants.User.KEY_EMAIL_SEND_ADDRESS + emailAddress);
+        if(hasSend != null){
+            return ResponseResult.FAILED("操作频繁!");
+        }
+        // 2、检查邮箱地址是否正确
+        boolean isEmailAddressOk = TextUtils.isEmailAddressOk(emailAddress);
+        if (!isEmailAddressOk) {
+            return ResponseResult.FAILED("邮箱错误!");
+        }
+        // 3、发送验证码,6位数：100000~999999
+        int code = random.nextInt(999999);
+        if(code < 100000){
+            code += 100000;
+        }
+        log.info("sendEmail ===> code ===> " + code);
+        try {
+            taskService.sendEmailVerifyCode(String.valueOf(code), emailAddress);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseResult.FAILED("系统出错，请稍后重试");
+        }
+        // 4、做记录
+        if(ipSendTime == null){
+            ipSendTime = 0;
+        }
+        ipSendTime++;
+        //1个小时有效期
+        redisUtils.set(Constants.User.KEY_EMAIL_SEND_IP + remoteAddress, ipSendTime, 60 * 60);
+        redisUtils.set(Constants.User.KEY_EMAIL_SEND_ADDRESS + emailAddress, "true", 30);
+        redisUtils.set(Constants.User.KEY_EMAIL_CODE_CONTENT + emailAddress, String.valueOf(code), 60 * 10);
+        return ResponseResult.SUCCESS("操作成功!");
     }
 }
