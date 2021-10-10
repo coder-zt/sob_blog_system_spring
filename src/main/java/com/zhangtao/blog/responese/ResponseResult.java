@@ -17,6 +17,31 @@ public class ResponseResult {
         return new ResponseResult(ResponseState.SUCCESS);
     }
 
+     public static ResponseResult ACCOUNT_NOT_LOGIN(){
+            return new ResponseResult(ResponseState.ACCOUNT_NOT_LOGIN);
+        }
+
+    public static ResponseResult PERMISSION_FORBID(){
+        return new ResponseResult(ResponseState.PERMISSION_FORBID);
+    }
+
+    public static ResponseResult ERROR_403(){
+        return new ResponseResult(ResponseState.ERROR_403);
+    }
+
+    public static ResponseResult ERROR_404(){
+        return new ResponseResult(ResponseState.ERROR_404);
+    }
+
+    public static ResponseResult ERROR_504(){
+        return new ResponseResult(ResponseState.ERROR_504);
+    }
+
+    public static ResponseResult ERROR_505(){
+        return new ResponseResult(ResponseState.ERROR_505);
+    }
+
+
     public static ResponseResult GET(ResponseState state){
         return new ResponseResult(state);
     }

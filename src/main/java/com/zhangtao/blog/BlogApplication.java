@@ -1,5 +1,8 @@
 package com.zhangtao.blog;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.zhangtao.blog.utils.HibernateProxyTypeAdapter;
 import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.RedisUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -39,5 +42,10 @@ public class BlogApplication {
     @Bean
     public Random createRandom(){
         return new Random();
+    }
+
+    @Bean
+    public Gson createGson(){
+        return new GsonBuilder().registerTypeAdapterFactory(HibernateProxyTypeAdapter.FACTORY).create();
     }
 }

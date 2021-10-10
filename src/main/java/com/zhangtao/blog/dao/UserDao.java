@@ -1,8 +1,13 @@
 package com.zhangtao.blog.dao;
 
 import com.zhangtao.blog.pojo.SobUser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+
 
 public interface UserDao extends JpaRepository<SobUser, String>, JpaSpecificationExecutor<SobUser> {
 
@@ -19,4 +24,53 @@ public interface UserDao extends JpaRepository<SobUser, String>, JpaSpecificatio
      * @return
      */
     SobUser findOneByEmail(String email);
+
+    /**
+     * 根据用户id查找用户信息
+     *
+     *
+     * @param userId
+     * @return
+     */
+    SobUser findOneById(String userId);
+
+    /**
+     * 根据用户id删除禁用用户权限
+     * @param userId
+     * @return
+     */
+    @Modifying
+    @Query(nativeQuery = true, value = "UPDATE `tb_user` SET `state` = `0` WHERE `id` = ?")
+    int deleteUserById(String userId);
+
+    /**
+     * 获取用户列表
+     *
+     * @param pageable
+     * @return
+     */
+    @Query(value = "select new SobUser(u.id,u.userName,u.roles,u.avatar,u.email,u.sign,u.state,u.regIp,u.loginIp,u.createTime,u.updateTime) from SobUser as u")
+    Page<SobUser> listAllUserNoPassword(Pageable pageable);
+
+
+    /**
+     * 根据email更新用户密码
+     * @param password
+     * @param email
+     * @return
+     */
+    @Modifying
+    @Query(nativeQuery = true, value = "UPDATE `tb_user` SET `password` = ? WHERE `email` = ?;")
+    int updatePasswordByEmail(String password, String email);
+
+    /**
+     * 根据用户id更改邮箱地址
+     *
+     * @param email
+     * @param id
+     * @return
+     */
+    @Modifying
+    @Query(nativeQuery = true, value = "UPDATE `tb_user` SET `email` = ? WHERE `id` = ?;")
+    int updateEmailById(String email, String id);
 }
