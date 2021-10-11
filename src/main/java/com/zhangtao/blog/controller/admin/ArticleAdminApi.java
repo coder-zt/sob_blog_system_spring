@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/admin/article")
-public class ArticleApi {
+public class ArticleAdminApi {
 
     /**
      * 添加分类

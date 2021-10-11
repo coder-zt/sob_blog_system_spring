@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/admin/web_size_info")
-public class WebSizeInfoApi {
+public class WebSizeInfoAdminApi {
 
     @GetMapping("/title")
     public ResponseResult getWebSizeTitle(){

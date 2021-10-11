@@ -7,14 +7,27 @@ public interface Constants {
     /**
      * 单位：秒
      */
-    interface TimeValue{
+    interface TimeValueInSecond {
 
         int MINUTE = 60;
         int HOUR = 60 * MINUTE;
-        long HOUR_2 = HOUR * 2;
+        int HOUR_2 = HOUR * 2;
         int DAY = HOUR * 24;
         int WEEK = DAY * 7;
         int MONTH = DAY * 30;
+    }
+
+    /**
+     * 单位：豪秒
+     */
+    interface TimeValueInMillions{
+        long SECOND = 1000;
+        long MINUTE = 60 * SECOND;
+        long HOUR = 60 * MINUTE;
+        long HOUR_2 = HOUR * 2;
+        long DAY = HOUR * 24;
+        long WEEK = DAY * 7;
+        long MONTH = DAY * 30;
     }
 
     interface User{

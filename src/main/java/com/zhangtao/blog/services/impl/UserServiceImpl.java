@@ -28,14 +28,10 @@ import org.springframework.util.DigestUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
-import javax.xml.soap.Text;
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
@@ -381,11 +377,11 @@ public class UserServiceImpl implements IUserService {
         String token = JwtUtil.createToken(claims);
         // 7.将token的md5值返回给前端并作为key将token保存在redis中
         String tokenKey = DigestUtils.md5DigestAsHex(token.getBytes());
-        redisUtils.set(Constants.User.KEY_TOKEN + tokenKey,token, Constants.TimeValue.HOUR_2);
+        redisUtils.set(Constants.User.KEY_TOKEN + tokenKey,token, Constants.TimeValueInSecond.HOUR_2);
         // 8. 设置cookie
         CookieUtils.setUpCookie(getResponse(),  Constants.User.COOKICE_TOKEN_EKY,tokenKey);
         // 9. 创建RefreshToken
-        String refreshTokenValue = JwtUtil.createRefreshToken(userFromDb.getId(), Constants.TimeValue.MONTH);
+        String refreshTokenValue = JwtUtil.createRefreshToken(userFromDb.getId(), Constants.TimeValueInMillions.MONTH);
         // TODO: 2021/10/8 保存到数据库
         // refreshToken、 tokenKey、 用户ID、 创建时间、 更新时间
         RefreshToken refreshToken = new RefreshToken();

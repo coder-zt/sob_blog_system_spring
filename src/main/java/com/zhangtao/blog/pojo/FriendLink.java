@@ -1,13 +1,16 @@
 package com.zhangtao.blog.pojo;
 
+import com.zhangtao.blog.responese.ResponseResult;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import java.util.Date;
 
 @Entity
 @Table ( name ="tb_friends" )
-public class FriendFlink {
+public class FriendLink {
 
   	@Id
 	@Column(name = "id")
@@ -23,9 +26,9 @@ public class FriendFlink {
   	@Column(name = "state" )
 	private String state;
   	@Column(name = "create_time" )
-	private java.sql.Timestamp create_time;
+	private Date createTime;
   	@Column(name = "update_time" )
-	private java.sql.Timestamp update_time;
+	private Date updateTime;
 
 
 	public String getId() {
@@ -81,22 +84,19 @@ public class FriendFlink {
 		this.state = state;
 	}
 
-
-	public java.sql.Timestamp getCreate_time() {
-		return create_time;
+	public Date getUpdateTime() {
+		return updateTime;
 	}
 
-	public void setCreate_time(java.sql.Timestamp create_time) {
-		this.create_time = create_time;
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
 	}
 
-
-	public java.sql.Timestamp getUpdate_time() {
-		return update_time;
+	public Date getCreateTime() {
+		return createTime;
 	}
 
-	public void setUpdate_time(java.sql.Timestamp update_time) {
-		this.update_time = update_time;
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
 	}
-
 }

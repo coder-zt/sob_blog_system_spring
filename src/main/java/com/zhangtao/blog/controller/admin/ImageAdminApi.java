@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/admin/image")
-public class ImageApi {
+public class ImageAdminApi {
 
     /**
      * 添加图片
