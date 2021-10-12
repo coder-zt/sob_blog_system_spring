@@ -1,8 +1,13 @@
 package com.zhangtao.blog.controller.admin;
 
-import com.zhangtao.blog.pojo.Images;
 import com.zhangtao.blog.responese.ResponseResult;
+import com.zhangtao.blog.services.IImageService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 
 /**
@@ -12,14 +17,18 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/admin/image")
 public class ImageAdminApi {
 
+
+    @Autowired
+    private IImageService imageService;
     /**
      * 添加图片
      *
      * @return
      */
+    @PreAuthorize("@permission.adminPermission()")
     @PostMapping
-    public ResponseResult uploadImage(){
-        return null;
+    public ResponseResult uploadImage(MultipartFile file){
+        return imageService.uploadImage(file);
     }
 
     /**
@@ -28,20 +37,10 @@ public class ImageAdminApi {
      * @param imageId
      * @return
      */
+    @PreAuthorize("@permission.adminPermission()")
     @DeleteMapping("/{imageId}")
     public ResponseResult deleteImage(@PathVariable("imageId") String imageId){
-        return null;
-    }
-
-    /**
-     * 修改图片
-     *
-     * @param imageId
-     * @return
-     */
-    @PutMapping("/{imageId}")
-    public ResponseResult updateImage(@PathVariable("imageId") String imageId, @RequestBody Images image){
-        return null;
+        return imageService.deleteImage(imageId);
     }
 
     /**
@@ -50,9 +49,14 @@ public class ImageAdminApi {
      * @param imageId
      * @return
      */
+    @PreAuthorize("@permission.adminPermission()")
     @GetMapping("/{imageId}")
-    public ResponseResult getImage(@PathVariable("imageId") String imageId){
-        return null;
+    public void viewImage(@PathVariable("imageId") String imageId){
+        try {
+            imageService. viewImage(imageId);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -62,8 +66,9 @@ public class ImageAdminApi {
      * @param size
      * @return
      */
-    @GetMapping("/list")
-    public ResponseResult listImage(@RequestParam("page") int page, @RequestParam("size") int size){
-        return null;
+    @PreAuthorize("@permission.adminPermission()")
+    @GetMapping("/list/{page}/{size}")
+    public ResponseResult listImages(@PathVariable("page") int page, @PathVariable("size") int size){
+        return imageService.listImages(page, size);
     }
 }

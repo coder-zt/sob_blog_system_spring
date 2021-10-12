@@ -22,7 +22,7 @@ import java.util.Date;
 @Service
 @Transactional
 @Slf4j
-public class FriendLinkServiceImpl implements IFriendLinkService {
+public class FriendLinkServiceImpl extends BaseService implements IFriendLinkService {
 
     @Autowired
     private IdWorker idWorker;
@@ -68,12 +68,8 @@ public class FriendLinkServiceImpl implements IFriendLinkService {
     @Override
     public ResponseResult listFriendLinks(int page, int size) {
         ///参数检查
-        if(page < Constants.Page.DEFAULT_PAGE){
-            page = Constants.Page.DEFAULT_PAGE;
-        }
-        if(size < Constants.Page.MINI_PAGE_SIZE){
-            size = Constants.Page.MINI_PAGE_SIZE;
-        }
+        page = checkPage(page);
+        size = checkSize(size);
         //创建查询条件
         Sort sort = new Sort(Sort.Direction.DESC, "createTime", "order");
         Pageable pageable = new PageRequest(page-1, size, sort);
@@ -86,7 +82,7 @@ public class FriendLinkServiceImpl implements IFriendLinkService {
     @Override
     public ResponseResult deleteFriendLink(String friendLinkId) {
         int result = friendLinkDao.deleteFriendLinkByUpdateStatus(friendLinkId);
-        return result>0?ResponseResult.SUCCESS("删除成功"):ResponseResult.FAILED("删除失败");
+        return getDeleteResult(result, "友情链接");
     }
 
     @Override

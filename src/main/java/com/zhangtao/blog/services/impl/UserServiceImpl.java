@@ -39,7 +39,7 @@ import java.util.Random;
 @Service
 @Transactional
 @Slf4j
-public class UserServiceImpl implements IUserService {
+public class UserServiceImpl extends BaseService implements IUserService {
 
     @Autowired
     private IdWorker idWorker;
@@ -515,21 +515,13 @@ public class UserServiceImpl implements IUserService {
     public ResponseResult deleteUser(String userId) {
         //修改用户状态
         int result = userDao.deleteUserById(userId);
-        if(result > 0){
-            return ResponseResult.SUCCESS("删除用户成功");
-        }else{
-            return ResponseResult.SUCCESS("用户不存在");
-        }
+        return getDeleteResult(result, "用户");
     }
 
     @Override
     public ResponseResult listUsers(int page, int size) {
-        if(page < Constants.Page.DEFAULT_PAGE){
-            page = Constants.Page.DEFAULT_PAGE;
-        }
-        if(size < Constants.Page.MINI_PAGE_SIZE){
-            size = Constants.Page.MINI_PAGE_SIZE;
-        }
+        page = checkPage(page);
+        size = checkSize(size);
         //开始查询用户数据
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
         Pageable pageable = new PageRequest(page - 1, size, sort);

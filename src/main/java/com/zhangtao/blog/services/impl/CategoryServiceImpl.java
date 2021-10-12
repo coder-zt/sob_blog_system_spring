@@ -21,7 +21,7 @@ import java.util.Date;
 @Service
 @Transactional
 @Slf4j
-public class CategoryServiceImpl implements ICategoryService {
+public class CategoryServiceImpl extends BaseService implements ICategoryService {
 
     @Autowired
     private IdWorker idWorker;
@@ -66,12 +66,8 @@ public class CategoryServiceImpl implements ICategoryService {
     @Override
     public ResponseResult listCategories(int page, int size) {
         //参数检查
-        if(page < Constants.Page.DEFAULT_PAGE){
-            page = Constants.Page.DEFAULT_PAGE;
-        }
-        if(size < Constants.Page.MINI_PAGE_SIZE){
-            size = Constants.Page.MINI_PAGE_SIZE;
-        }
+       page = checkPage(page);
+       size = checkSize(size);
         //创建查询条件
         Sort sort = new Sort(Sort.Direction.DESC, "createTime", "order");
         Pageable pageable = new PageRequest(page-1, size, sort);
@@ -108,6 +104,6 @@ public class CategoryServiceImpl implements ICategoryService {
     @Override
     public ResponseResult deleteCategory(String categoryId) {
         int result = categoryDao.deleteCategoryByUpdateState(categoryId);
-        return result == 0?ResponseResult.FAILED("分类删除失败"):ResponseResult.SUCCESS("分类删除成功");
+        return getDeleteResult(result, "分类");
     }
 }

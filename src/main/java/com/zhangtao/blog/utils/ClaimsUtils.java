@@ -31,7 +31,7 @@ public class ClaimsUtils {
         String id = (String)claims.get(ID);
         sobUser.setId(id);
         String userName = (String)claims.get(USER_NAME);
-        sobUser.setId(userName);
+        sobUser.setUserName(userName);
         String roles = (String)claims.get(ROLES);
         sobUser.setRoles(roles);
         String avatars = (String)claims.get(AVATARS);

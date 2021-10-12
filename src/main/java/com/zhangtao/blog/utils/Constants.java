@@ -30,6 +30,16 @@ public interface Constants {
         long MONTH = DAY * 30;
     }
 
+    interface ImageType{
+        String PREFIX = "image/";
+        String TYPE_JPG = "jpg";
+        String TYPE_PNG = "png";
+        String TYPE_GIF = "gif";
+        String TYPE_JPG_WHIT_PREFIX = PREFIX + TYPE_JPG;
+        String TYPE_PNG_WHIT_PREFIX = PREFIX + TYPE_PNG;
+        String TYPE_GIF_WHIT_PREFIX = PREFIX + TYPE_GIF;
+    }
+
     interface User{
         String ROLE_ADMIN = "roleAdmin";
         String ROLE_NORMAL = "roleNormal";

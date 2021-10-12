@@ -50,6 +50,7 @@ public class FriendLinkAdminApi {
      * @param friendLinkId
      * @return
      */
+    @PreAuthorize("@permission.adminPermission()")
     @PutMapping("/{friendLinkId}")
     public ResponseResult updateFriendLink(@PathVariable("friendLinkId") String friendLinkId, @RequestBody FriendLink friendFlink){
         return friendLinkService.updateFriendLink(friendLinkId, friendFlink);
@@ -61,6 +62,7 @@ public class FriendLinkAdminApi {
      * @param friendLinkId
      * @return
      */
+    @PreAuthorize("@permission.adminPermission()")
     @GetMapping("/{friendLinkId}")
     public ResponseResult getFriends(@PathVariable("friendLinkId") String friendLinkId){
         return friendLinkService.getFriendLink(friendLinkId);
@@ -73,6 +75,7 @@ public class FriendLinkAdminApi {
      * @param size
      * @return
      */
+    @PreAuthorize("@permission.adminPermission()")
     @GetMapping("/list/{page}/{size}")
     public ResponseResult listFriendLinks(@PathVariable("page") int page, @PathVariable("size") int size){
         return friendLinkService.listFriendLinks(page, size);
