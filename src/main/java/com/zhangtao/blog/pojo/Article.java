@@ -1,42 +1,43 @@
 package com.zhangtao.blog.pojo;
 
+import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
-@Table ( name ="tb_article" )
+@Table(name = "tb_article")
 public class Article {
 
-  	@Id
+	@Id
 	@Column(name = "id")
 	private String id;
-  	@Column(name = "title" )
+	@Column(name = "title")
 	private String title;
-  	@Column(name = "user_id" )
-	private String user_id;
-  	@Column(name = "category_id" )
-	private String category_id;
-  	@Column(name = "content" )
+	@Column(name = "user_id")
+	private String userId;
+	@Column(name = "category_id")
+	private String categoryId;
+	@Column(name = "content")
 	private String content;
-  	@Column(name = "type" )
+	@Column(name = "type")
 	private String type;
-  	@Column(name = "cover" )
+	@Column(name = "cover")
 	private String cover;
-  	@Column(name = "state" )
+	@Column(name = "state")
 	private String state;
-  	@Column(name = "summary" )
+	@Column(name = "summary")
 	private String summary;
-  	@Column(name = "labels" )
+	@Column(name = "labels")
 	private String labels;
-  	@Column(name = "view_count" )
-	private long view_count;
-  	@Column(name = "create_time" )
-	private java.sql.Timestamp create_time;
-  	@Column(name = "update_time" )
-	private java.sql.Timestamp update_time;
-
+	@Column(name = "view_count")
+	private long viewCount;
+	@Column(name = "create_time")
+	private Date createTime;
+	@Column(name = "update_time")
+	private Date updateTime;
 
 	public String getId() {
 		return id;
@@ -46,7 +47,6 @@ public class Article {
 		this.id = id;
 	}
 
-
 	public String getTitle() {
 		return title;
 	}
@@ -55,24 +55,21 @@ public class Article {
 		this.title = title;
 	}
 
-
-	public String getUser_id() {
-		return user_id;
+	public String getUserId() {
+		return userId;
 	}
 
-	public void setUser_id(String user_id) {
-		this.user_id = user_id;
+	public void setUserId(String userId) {
+		this.userId = userId;
 	}
 
-
-	public String getCategory_id() {
-		return category_id;
+	public String getCategoryId() {
+		return categoryId;
 	}
 
-	public void setCategory_id(String category_id) {
-		this.category_id = category_id;
+	public void setCategoryId(String categoryId) {
+		this.categoryId = categoryId;
 	}
-
 
 	public String getContent() {
 		return content;
@@ -82,7 +79,6 @@ public class Article {
 		this.content = content;
 	}
 
-
 	public String getType() {
 		return type;
 	}
@@ -90,7 +86,6 @@ public class Article {
 	public void setType(String type) {
 		this.type = type;
 	}
-
 
 	public String getCover() {
 		return cover;
@@ -100,7 +95,6 @@ public class Article {
 		this.cover = cover;
 	}
 
-
 	public String getState() {
 		return state;
 	}
@@ -108,7 +102,6 @@ public class Article {
 	public void setState(String state) {
 		this.state = state;
 	}
-
 
 	public String getSummary() {
 		return summary;
@@ -118,7 +111,6 @@ public class Article {
 		this.summary = summary;
 	}
 
-
 	public String getLabels() {
 		return labels;
 	}
@@ -127,31 +119,28 @@ public class Article {
 		this.labels = labels;
 	}
 
-
-	public long getView_count() {
-		return view_count;
+	public long getViewCount() {
+		return viewCount;
 	}
 
-	public void setView_count(long view_count) {
-		this.view_count = view_count;
+	public void setViewCount(long viewCount) {
+		this.viewCount = viewCount;
 	}
 
-
-	public java.sql.Timestamp getCreate_time() {
-		return create_time;
+	public Date getCreateTime() {
+		return createTime;
 	}
 
-	public void setCreate_time(java.sql.Timestamp create_time) {
-		this.create_time = create_time;
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
 	}
 
-
-	public java.sql.Timestamp getUpdate_time() {
-		return update_time;
+	public Date getUpdateTime() {
+		return updateTime;
 	}
 
-	public void setUpdate_time(java.sql.Timestamp update_time) {
-		this.update_time = update_time;
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
 	}
 
 }

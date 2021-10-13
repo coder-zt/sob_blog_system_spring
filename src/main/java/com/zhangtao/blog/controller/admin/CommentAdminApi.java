@@ -4,22 +4,21 @@ import com.zhangtao.blog.pojo.Comment;
 import com.zhangtao.blog.responese.ResponseResult;
 import org.springframework.web.bind.annotation.*;
 
-
 /**
- *管理中心分类的api
+ * 管理中心评论的api
  */
 @RestController
 @RequestMapping("/admin/comment")
 public class CommentAdminApi {
 
     /**
-     * 删除分类
+     * 删除评论
      *
      * @param commentId
      * @return
      */
     @DeleteMapping("/{commentId}")
-    public ResponseResult deleteComment(@PathVariable("commentId") String commentId){
+    public ResponseResult deleteComment(@PathVariable("commentId") String commentId) {
         return null;
     }
 
@@ -30,21 +29,19 @@ public class CommentAdminApi {
      * @return
      */
     @PutMapping("/{commentId}")
-    public ResponseResult updateComment(@PathVariable("commentId") String commentId, @RequestBody Comment comment){
+    public ResponseResult updateComment(@PathVariable("commentId") String commentId, @RequestBody Comment comment) {
         return null;
     }
 
-
-
     /**
-     * 获取分类列表
+     * 获取评论列表
      *
      * @param page
      * @param size
      * @return
      */
     @GetMapping("/list")
-    public ResponseResult addComment(@RequestParam("page") int page, @RequestParam("size") int size){
+    public ResponseResult addComment(@RequestParam("page") int page, @RequestParam("size") int size) {
         return null;
     }
 
@@ -55,7 +52,7 @@ public class CommentAdminApi {
      * @return
      */
     @PutMapping("/top/{commentId}")
-    public ResponseResult topComment(@PathVariable("commentId")String commentId) {
+    public ResponseResult topComment(@PathVariable("commentId") String commentId) {
         return null;
     }
 }

@@ -53,12 +53,23 @@ public interface Constants {
         String COOKICE_TOKEN_EKY = "cookice_token_eky";
     }
 
-    interface Settings{
+    interface Settings {
         String MANAGER_ACCOUNT_INIT_STATE = "manager_account_init_state";
+        String WEBSITE_TITLE = "website_title";
+        String WEBSITE_KEYWORDS = "website_keywords";
+        String WEBSITE_DESC = "website_desc";
+        String WEBSITE_VIEW_COUNT = "website_view_count";
     }
 
     interface Page {
         int DEFAULT_PAGE = 1;
         int MINI_PAGE_SIZE = 10;
+    }
+
+    interface Article {
+        String STATE_DRAFT = "1";
+        String STATE_PUBLISH = "2";
+        int TITLE_MAX_LENGTH = 128;
+        int SUMMARY_MAC_LENGTH = 256;
     }
 }

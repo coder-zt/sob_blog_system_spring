@@ -1,5 +1,13 @@
 package com.zhangtao.blog.services.impl;
 
+import java.util.Date;
+import java.util.Map;
+import java.util.Random;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.transaction.Transactional;
+
 import com.google.gson.Gson;
 import com.wf.captcha.ArithmeticCaptcha;
 import com.wf.captcha.GifCaptcha;
@@ -14,9 +22,14 @@ import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.responese.ResponseState;
 import com.zhangtao.blog.services.IUserService;
-import com.zhangtao.blog.utils.*;
-import io.jsonwebtoken.Claims;
-import lombok.extern.slf4j.Slf4j;
+import com.zhangtao.blog.utils.ClaimsUtils;
+import com.zhangtao.blog.utils.Constants;
+import com.zhangtao.blog.utils.CookieUtils;
+import com.zhangtao.blog.utils.IdWorker;
+import com.zhangtao.blog.utils.JwtUtil;
+import com.zhangtao.blog.utils.RedisUtils;
+import com.zhangtao.blog.utils.TextUtils;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +41,8 @@ import org.springframework.util.DigestUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
@@ -91,14 +106,14 @@ public class UserServiceImpl extends BaseService implements IUserService {
         if(TextUtils.isEmpty(sobUser.getPassword())){
             return ResponseResult.FAILED("密码不能为空");
         }
-        if(TextUtils.isEmpty(sobUser.getEmail())){
+        if (TextUtils.isEmpty(sobUser.getEmail())) {
             return ResponseResult.FAILED("email不能为空");
         }
-        //密码加密
+        // 密码加密
         String password = sobUser.getPassword();
         String encode = passwordEncoder.encode(password);
         sobUser.setPassword(encode);
-        //补充数据
+        // 补充数据
         sobUser.setId(String.valueOf(idWorker.nextId()));
         sobUser.setRoles(Constants.User.ROLE_ADMIN);
         sobUser.setAvatar(Constants.User.DEFAULT_AVATAR);
@@ -111,13 +126,13 @@ public class UserServiceImpl extends BaseService implements IUserService {
         sobUser.setRegIp(remoteAddr);
         sobUser.setCreateTime(new Date());
         sobUser.setUpdateTime(new Date());
-        //保存到数据库
+        // 保存到数据库
         userDao.save(sobUser);
-        //更新标记
-        Settings settings  = new Settings();
+        // 更新标记
+        Settings settings = new Settings();
         settings.setId(idWorker.nextId() + "");
-        settings.setCreate_time(new Date());
-        settings.setUpdate_time(new Date());
+        settings.setCreateTime(new Date());
+        settings.setUpdateTime(new Date());
         settings.setKey(Constants.Settings.MANAGER_ACCOUNT_INIT_STATE);
         settings.setValue("1");
         settingsDao.save(settings);
@@ -139,14 +154,14 @@ public class UserServiceImpl extends BaseService implements IUserService {
      * @throws Exception
      */
     @Override
-    public void createCaptcha(String captchaKey) throws Exception{
-        if(TextUtils.isEmpty(captchaKey) || captchaKey.length() < 13){
+    public void createCaptcha(String captchaKey) throws Exception {
+        if (TextUtils.isEmpty(captchaKey) || captchaKey.length() < 13) {
             return;
         }
         long key;
-        try{
+        try {
             key = Long.parseLong(captchaKey);
-        }catch (Exception e){
+        } catch (Exception e) {
             return;
         }
 
@@ -157,18 +172,18 @@ public class UserServiceImpl extends BaseService implements IUserService {
         getResponse().setDateHeader("Expires", 0);
         int captchaType = random.nextInt(3);
         Captcha targetCaptcha = null;
-        switch (captchaType){
+        switch (captchaType) {
             case 0:
                 // 三个参数分别为宽、高、位数
-                targetCaptcha = new SpecCaptcha(200,60, 5);
+                targetCaptcha = new SpecCaptcha(200, 60, 5);
                 break;
-            case 1://gif类型
-                targetCaptcha = new GifCaptcha(200,60);
+            case 1:// gif类型
+                targetCaptcha = new GifCaptcha(200, 60);
                 break;
             case 2:// 算术类型
-                targetCaptcha = new ArithmeticCaptcha(200,60);
+                targetCaptcha = new ArithmeticCaptcha(200, 60);
                 targetCaptcha.setLen(2);
-                String arithmeticStr = ((ArithmeticCaptcha)targetCaptcha).getArithmeticString();
+                String arithmeticStr = ((ArithmeticCaptcha) targetCaptcha).getArithmeticString();
                 log.info("ArithmeticCaptcha string is ===> " + arithmeticStr);
                 break;
         }
@@ -190,10 +205,9 @@ public class UserServiceImpl extends BaseService implements IUserService {
     /**
      * 发送邮件验证码
      *
-     *  * 使用场景：
-     *      *      注册(register)：邮箱已经注册过来需要提示已注册
-     *      *      修改邮箱（新的邮箱）(update)：邮箱已经注册过来需要提示已注册
-     *      *      找回密码(forget)：如果邮箱地址不存在则提示为注册该邮箱
+     * * 使用场景： * 注册(register)：邮箱已经注册过来需要提示已注册 * 修改邮箱（新的邮箱）(update)：邮箱已经注册过来需要提示已注册 *
+     * 找回密码(forget)：如果邮箱地址不存在则提示为注册该邮箱
+     *
      * @param emailAddress
      * @return
      */
@@ -515,13 +529,21 @@ public class UserServiceImpl extends BaseService implements IUserService {
     public ResponseResult deleteUser(String userId) {
         //修改用户状态
         int result = userDao.deleteUserById(userId);
-        return getDeleteResult(result, "用户");
+        if(result > 0){
+            return ResponseResult.SUCCESS("删除用户成功");
+        }else{
+            return ResponseResult.SUCCESS("用户不存在");
+        }
     }
 
     @Override
     public ResponseResult listUsers(int page, int size) {
-        page = checkPage(page);
-        size = checkSize(size);
+        if(page < Constants.Page.DEFAULT_PAGE){
+            page = Constants.Page.DEFAULT_PAGE;
+        }
+        if(size < Constants.Page.MINI_PAGE_SIZE){
+            size = Constants.Page.MINI_PAGE_SIZE;
+        }
         //开始查询用户数据
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
         Pageable pageable = new PageRequest(page - 1, size, sort);

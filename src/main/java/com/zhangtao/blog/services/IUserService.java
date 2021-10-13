@@ -7,9 +7,9 @@ public interface IUserService {
 
     ResponseResult initManagerAccount(SobUser sobUser);
 
-    void createCaptcha(String captchaKey)  throws Exception;
+    void createCaptcha(String captchaKey) throws Exception;
 
-    ResponseResult sendEmail(String type,  String emailAddress);
+    ResponseResult sendEmail(String type, String emailAddress);
 
     ResponseResult register(SobUser sobUser, String emailCode, String captchaCode, String captchaKey);
 
