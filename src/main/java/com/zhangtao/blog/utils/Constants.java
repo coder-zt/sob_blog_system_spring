@@ -42,4 +42,11 @@ public interface Constants {
         int DEFAULT_PAGE = 1;
         int MINI_PAGE_SIZE = 10;
     }
+
+    interface Article {
+        String STATE_DRAFT = "1";
+        String STATE_PUBLISH = "2";
+        int TITLE_MAX_LENGTH = 128;
+        int SUMMARY_MAC_LENGTH = 256;
+    }
 }

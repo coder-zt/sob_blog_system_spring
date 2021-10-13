@@ -2,7 +2,6 @@ package com.zhangtao.blog.dao;
 
 import com.zhangtao.blog.pojo.Looper;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;

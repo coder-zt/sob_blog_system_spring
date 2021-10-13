@@ -2,7 +2,6 @@ package com.zhangtao.blog.dao;
 
 import com.zhangtao.blog.pojo.Settings;
 
-import org.apache.coyote.http2.Setting;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 

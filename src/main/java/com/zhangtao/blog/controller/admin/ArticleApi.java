@@ -2,24 +2,30 @@ package com.zhangtao.blog.controller.admin;
 
 import com.zhangtao.blog.pojo.Article;
 import com.zhangtao.blog.responese.ResponseResult;
+import com.zhangtao.blog.services.IArticleService;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 管理中心分类的api
+ * 管理中心文章的api
  */
 @RestController
 @RequestMapping("/admin/article")
 public class ArticleApi {
 
+    @Autowired
+    private IArticleService articleService;
+
     /**
-     * 添加分类
+     * 发表文章
      *
      * @param article
      * @return
      */
     @PostMapping
     public ResponseResult postArticle(@RequestBody Article article) {
-        return null;
+        return articleService.postArticle(article);
     }
 
     /**
