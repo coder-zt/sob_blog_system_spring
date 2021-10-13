@@ -18,8 +18,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.swagger.models.properties.DateProperty;
-
 @Service
 @Transactional
 public class LooperServiceImpl implements ILooperService {
@@ -74,8 +72,8 @@ public class LooperServiceImpl implements ILooperService {
     }
 
     @Override
-    public ResponseResult getLoop(String looperId) {
-        Looper loopFromDb = loopDao.findOneByLoopId(looperId);
+    public ResponseResult getLoop(String loopId) {
+        Looper loopFromDb = loopDao.findOneById(loopId);
         if (loopFromDb == null) {
             return ResponseResult.FAILED("该轮播图不存在");
         }
@@ -85,7 +83,7 @@ public class LooperServiceImpl implements ILooperService {
     @Override
     public ResponseResult updateLoop(String loopId, Looper loop) {
         // 找出来判空
-        Looper loopFromDb = loopDao.findOneByLoopId(loopId);
+        Looper loopFromDb = loopDao.findOneById(loopId);
         if (loopFromDb == null) {// 没有-
             return ResponseResult.FAILED("轮播图不存在！");
         }

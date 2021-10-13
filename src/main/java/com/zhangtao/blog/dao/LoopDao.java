@@ -16,7 +16,7 @@ public interface LoopDao extends JpaRepository<Looper, String>, JpaSpecification
      * @param looperId
      * @return
      */
-    Looper findOneByLoopId(String looperId);
+    Looper findOneById(String loopId);
 
     /**
      * 逻辑删除轮播图

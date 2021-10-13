@@ -7,7 +7,7 @@ public interface Constants {
     /**
      * 单位：秒
      */
-    interface TimeValue{
+    interface TimeValue {
 
         int MINUTE = 60;
         int HOUR = 60 * MINUTE;
@@ -17,7 +17,7 @@ public interface Constants {
         int MONTH = DAY * 30;
     }
 
-    interface User{
+    interface User {
         String ROLE_ADMIN = "roleAdmin";
         String ROLE_NORMAL = "roleNormal";
         String DEFAULT_AVATAR = "https://imgs.sunofbeaches.com/group1/M00/00/0E/rBsADV4c3lOAe3XQAAARPTB-zes803.png";
@@ -30,8 +30,12 @@ public interface Constants {
         String COOKICE_TOKEN_EKY = "cookice_token_eky";
     }
 
-    interface Settings{
+    interface Settings {
         String MANAGER_ACCOUNT_INIT_STATE = "manager_account_init_state";
+        String WEBSITE_TITLE = "website_title";
+        String WEBSITE_KEYWORDS = "website_keywords";
+        String WEBSITE_DESC = "website_desc";
+        String WEBSITE_VIEW_COUNT = "website_view_count";
     }
 
     interface Page {

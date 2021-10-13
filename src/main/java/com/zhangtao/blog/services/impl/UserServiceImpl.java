@@ -115,8 +115,8 @@ public class UserServiceImpl implements IUserService {
         // 更新标记
         Settings settings = new Settings();
         settings.setId(idWorker.nextId() + "");
-        settings.setCreate_time(new Date());
-        settings.setUpdate_time(new Date());
+        settings.setCreateTime(new Date());
+        settings.setUpdateTime(new Date());
         settings.setKey(Constants.Settings.MANAGER_ACCOUNT_INIT_STATE);
         settings.setValue("1");
         settingsDao.save(settings);
