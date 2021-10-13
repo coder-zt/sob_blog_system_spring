@@ -1,32 +1,33 @@
 package com.zhangtao.blog.pojo;
 
+import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
-@Table ( name ="tb_looper" )
+@Table(name = "tb_looper")
 public class Looper {
 
-  	@Id
+	@Id
 	@Column(name = "id")
 	private String id;
-  	@Column(name = "title" )
+	@Column(name = "title")
 	private String title;
-  	@Column(name = "`order`" )
+	@Column(name = "`order`")
 	private long order;
-  	@Column(name = "state" )
+	@Column(name = "state")
 	private String state;
-  	@Column(name = "target_url" )
-	private String target_url;
-  	@Column(name = "image_url" )
-	private String image_url;
-  	@Column(name = "create_time" )
-	private java.sql.Timestamp create_time;
-  	@Column(name = "update_time" )
-	private java.sql.Timestamp update_time;
-
+	@Column(name = "target_url")
+	private String targetUrl;
+	@Column(name = "image_url")
+	private String imageUrl;
+	@Column(name = "create_time")
+	private Date createTime;
+	@Column(name = "update_time")
+	private Date updateTime;
 
 	public String getId() {
 		return id;
@@ -36,7 +37,6 @@ public class Looper {
 		this.id = id;
 	}
 
-
 	public String getTitle() {
 		return title;
 	}
@@ -44,7 +44,6 @@ public class Looper {
 	public void setTitle(String title) {
 		this.title = title;
 	}
-
 
 	public long getOrder() {
 		return order;
@@ -54,7 +53,6 @@ public class Looper {
 		this.order = order;
 	}
 
-
 	public String getState() {
 		return state;
 	}
@@ -63,40 +61,36 @@ public class Looper {
 		this.state = state;
 	}
 
-
-	public String getTarget_url() {
-		return target_url;
+	public String getTargetUrl() {
+		return targetUrl;
 	}
 
-	public void setTarget_url(String target_url) {
-		this.target_url = target_url;
+	public void setTargetUrl(String targetUrl) {
+		this.targetUrl = targetUrl;
 	}
 
-
-	public String getImage_url() {
-		return image_url;
+	public String getImageUrl() {
+		return imageUrl;
 	}
 
-	public void setImage_url(String image_url) {
-		this.image_url = image_url;
+	public void setImageUrl(String imageUrl) {
+		this.imageUrl = imageUrl;
 	}
 
-
-	public java.sql.Timestamp getCreate_time() {
-		return create_time;
+	public Date getcreateTime() {
+		return createTime;
 	}
 
-	public void setCreate_time(java.sql.Timestamp create_time) {
-		this.create_time = create_time;
+	public void setcreateTime(Date createTime) {
+		this.createTime = createTime;
 	}
 
-
-	public java.sql.Timestamp getUpdate_time() {
-		return update_time;
+	public Date getupdateTime() {
+		return updateTime;
 	}
 
-	public void setUpdate_time(java.sql.Timestamp update_time) {
-		this.update_time = update_time;
+	public void setupdateTime(Date updateTime) {
+		this.updateTime = updateTime;
 	}
 
 }

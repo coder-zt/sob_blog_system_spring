@@ -25,27 +25,27 @@ public class BlogApplication {
     }
 
     @Bean
-    public IdWorker createIdWorker(){
+    public IdWorker createIdWorker() {
         return new IdWorker(0, 0);
     }
 
     @Bean
-    public BCryptPasswordEncoder createPasswordEncoder(){
+    public BCryptPasswordEncoder createPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public RedisUtils createRedisUtils(){
+    public RedisUtils createRedisUtils() {
         return new RedisUtils();
     }
 
     @Bean
-    public Random createRandom(){
+    public Random createRandom() {
         return new Random();
     }
 
     @Bean
-    public Gson createGson(){
+    public Gson createGson() {
         return new GsonBuilder().registerTypeAdapterFactory(HibernateProxyTypeAdapter.FACTORY).create();
     }
 }
