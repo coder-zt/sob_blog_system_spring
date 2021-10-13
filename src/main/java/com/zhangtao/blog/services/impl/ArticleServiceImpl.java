@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
-public class ArticleServiceImpl implements IArticleService {
+public class ArticleServiceImpl extends BaseService implements IArticleService {
 
     @Autowired
     private IdWorker IdWorker;

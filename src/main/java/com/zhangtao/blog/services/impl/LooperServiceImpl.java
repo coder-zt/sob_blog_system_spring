@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
-public class LooperServiceImpl implements ILooperService {
+public class LooperServiceImpl extends BaseService implements ILooperService {
 
     @Autowired
     private IdWorker IdWorker;
@@ -58,12 +58,8 @@ public class LooperServiceImpl implements ILooperService {
     @Override
     public ResponseResult listLoop(int page, int size) {
         // 参数检查
-        if (page > Constants.Page.DEFAULT_PAGE) {
-            page = Constants.Page.DEFAULT_PAGE;
-        }
-        if (size > Constants.Page.MINI_PAGE_SIZE) {
-            size = Constants.Page.MINI_PAGE_SIZE;
-        }
+        page = checkPage(page);
+        size = checkSize(size);
         // 创建查询条件
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
         Pageable pageable = new PageRequest(page - 1, size, sort);
@@ -115,7 +111,7 @@ public class LooperServiceImpl implements ILooperService {
     @Override
     public ResponseResult deleteLoop(String loopId) {
         int result = loopDao.deleteByUpdateSatate(loopId);
-        return result > 0 ? ResponseResult.SUCCESS("轮播图删除成功!") : ResponseResult.FAILED("轮播图删除失败!");
+        return getDeleteResult(result,"轮播图");
     }
 
 }
