@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ArticleServiceImpl extends BaseService implements IArticleService {
 
     @Autowired
-    private IdWorker IdWorker;
+    private IdWorker idWorker;
 
     @Autowired
     private IUserService userService;
@@ -54,39 +54,26 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
      */
     @Override
     public ResponseResult postArticle(Article article) {
-        // 获取用户对象
+        // 检查用户，获取到用户对象
         SobUser sobUser = userService.checkSobUser();
+        // 未登录
         if (sobUser == null) {
             return ResponseResult.ACCOUNT_NOT_LOGIN();
         }
         // 检查数据
-        // 文章标题、摘要、分类ID、标签、类型、内容
+        // title、分类ID、内容、类型、摘要、标签
         String title = article.getTitle();
         if (TextUtils.isEmpty(title)) {
-            return ResponseResult.FAILED("文章标题不可以为空.");
+            return ResponseResult.FAILED("标题不可以为空.");
         }
-        if (title.length() > Constants.Article.TITLE_MAX_LENGTH) {
-            return ResponseResult.FAILED("文章标题不可以超过128个字符");
-        }
-        String summary = article.getSummary();
-        if (!TextUtils.isEmpty(summary)) {
-            return ResponseResult.FAILED("摘要不可以为空!");
-        }
-        if (summary.length() > Constants.Article.SUMMARY_MAC_LENGTH) {
-            return ResponseResult.FAILED("文章标题不可以超过256个字符");
-        }
-        String categoryID = article.getCategoryId();
-        if (TextUtils.isEmpty(categoryID)) {
-            return ResponseResult.FAILED("未指定文章类别");
-        }
-        String label = article.getLabels();
-        if (TextUtils.isEmpty(label)) {
-            return ResponseResult.FAILED("文章标签不可以为空!");
-        }
+
+        // 2种，草稿和发布
         String state = article.getState();
-        if (!Constants.Article.STATE_DRAFT.equals(state) && !Constants.Article.STATE_DRAFT.equals(state)) {
+        if (!Constants.Article.STATE_PUBLISH.equals(state) && !Constants.Article.STATE_DRAFT.equals(state)) {
+            // 不支持此操作
             return ResponseResult.FAILED("不支持此操作");
         }
+        // 0表示富文本，1表示markdown
         String type = article.getType();
         if (TextUtils.isEmpty(type)) {
             return ResponseResult.FAILED("类型不可以为空.");
@@ -94,13 +81,56 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         if (!"0".equals(type) && !"1".equals(type)) {
             return ResponseResult.FAILED("类型格式不对.");
         }
-        // 补充数据 id、用户id、创建时间、更新时间
-        article.setId(IdWorker.nextId() + "");
+
+        // 以下检查是发布的检查，草稿不需要检查
+        if (Constants.Article.STATE_PUBLISH.equals(state)) {
+            if (title.length() > Constants.Article.TITLE_MAX_LENGTH) {
+                return ResponseResult.FAILED("文章标题不可以超过" + Constants.Article.TITLE_MAX_LENGTH + "个字符");
+            }
+            String content = article.getContent();
+            if (TextUtils.isEmpty(content)) {
+                return ResponseResult.FAILED("内容不可为空.");
+            }
+
+            String summary = article.getSummary();
+            if (TextUtils.isEmpty(summary)) {
+                return ResponseResult.FAILED("摘要不可以为空.");
+            }
+            if (summary.length() > Constants.Article.SUMMARY_MAX_LENGTH) {
+                return ResponseResult.FAILED("摘要不可以超出" + Constants.Article.SUMMARY_MAX_LENGTH + "个字符.");
+            }
+            String labels = article.getLabels();
+            // 标签-标签1-标签2
+            if (TextUtils.isEmpty(labels)) {
+                return ResponseResult.FAILED("标签不可以为空.");
+            }
+        }
+
+        String articleId = article.getId();
+        if (TextUtils.isEmpty(articleId)) {
+            // 新内容,数据里没有的
+            // 补充数据：ID、创建时间、用户ID、更新时间
+            article.setId(idWorker.nextId() + "");
+            article.setCreateTime(new Date());
+        } else {
+            // 更新内容，对状态进行处理，如果已经是发布的，则不能再保存为草稿
+            Article articleFromDb = articleDao.findOneById(articleId);
+            if (Constants.Article.STATE_PUBLISH.equals(articleFromDb.getState())
+                    && Constants.Article.STATE_DRAFT.equals(state)) {
+                // 已经发布了，只能更新，不能保存草稿
+                return ResponseResult.FAILED("已发布文章不支持成为草稿.");
+            }
+        }
         article.setUserId(sobUser.getId());
-        article.setCreateTime(new Date());
         article.setUpdateTime(new Date());
+        // 保存到数据库里
         articleDao.save(article);
-        return ResponseResult.SUCCESS("文章发表成功.");
+        // TODO:保存到搜索的数据库里
+        // 打散标签，入库，统计
+        // 返回结果,只有一种case使用到这个ID
+        // 如果要做程序自动保存成草稿（比如说每30秒保存一次，就需要加上这个ID了，否则会创建多个Item）
+        return ResponseResult.SUCCESS(Constants.Article.STATE_DRAFT.equals(state) ? "草稿保存成功" : "文章发表成功.")
+                .setData(article.getId());
     }
 
 }
