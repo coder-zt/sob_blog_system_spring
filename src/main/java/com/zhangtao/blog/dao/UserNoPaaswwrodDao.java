@@ -1,6 +1,7 @@
 package com.zhangtao.blog.dao;
 
 import com.zhangtao.blog.pojo.SobUser;
+import com.zhangtao.blog.pojo.SobUserNoPassword;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,21 +10,21 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 
-public interface UserDao extends JpaRepository<SobUser, String>, JpaSpecificationExecutor<SobUser> {
+public interface UserNoPaaswwrodDao extends JpaRepository<SobUserNoPassword, String>, JpaSpecificationExecutor<SobUserNoPassword> {
 
     /**
      * 根据用户名查找用户信息
      * @param userName
      * @return
      */
-    SobUser findOneByUserName(String userName);
+    SobUserNoPassword findOneByUserName(String userName);
 
     /**
      * 根据邮箱地址查找用户信息
      * @param email
      * @return
      */
-    SobUser findOneByEmail(String email);
+    SobUserNoPassword findOneByEmail(String email);
 
     /**
      * 根据用户id查找用户信息
@@ -32,7 +33,7 @@ public interface UserDao extends JpaRepository<SobUser, String>, JpaSpecificatio
      * @param userId
      * @return
      */
-    SobUser findOneById(String userId);
+    SobUserNoPassword findOneById(String userId);
 
     /**
      * 根据用户id删除禁用用户权限
@@ -42,6 +43,7 @@ public interface UserDao extends JpaRepository<SobUser, String>, JpaSpecificatio
     @Modifying
     @Query(nativeQuery = true, value = "UPDATE `tb_user` SET `state` = `0` WHERE `id` = ?")
     int deleteUserById(String userId);
+
 
 
     /**

@@ -1,15 +1,14 @@
 package com.zhangtao.blog.pojo;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import java.util.Date;
-import java.util.List;
-
-import javax.persistence.*;
 
 @Entity
 @Table(name = "tb_article")
-public class Article {
+public class ArticleNoContent {
 
 	@Id
 	@Column(name = "id")
@@ -20,8 +19,6 @@ public class Article {
 	private String userId;
 	@Column(name = "category_id")
 	private String categoryId;
-	@Column(name = "content")
-	private String content;
 	@Column(name = "type")
 	private String type;
 	@Column(name = "cover")
@@ -31,42 +28,13 @@ public class Article {
 	@Column(name = "summary")
 	private String summary;
 	@Column(name = "labels")
-	private String label;
+	private String labels;
 	@Column(name = "view_count")
 	private long viewCount;
 	@Column(name = "create_time")
 	private Date createTime;
 	@Column(name = "update_time")
 	private Date updateTime;
-
-	@OneToOne(targetEntity = SobUserNoPassword.class)
-	@JoinColumn(name="user_id", referencedColumnName = "id", insertable = false, updatable = false)
-	private SobUserNoPassword sobUser;
-
-	@Transient
-	private List<String> labels = new ArrayList<>();
-
-	public String getLabel() {
-		//打散
-		if (label != null) {
-			if (!this.label.contains("_")) {
-				this.labels.add(label);
-			}else{
-				String[] split = label.split("_");
-				List<String> strings = Arrays.asList(split);
-				this.labels.addAll(strings);
-			}
-		}
-		return label;
-	}
-
-	public void setLabel(String label) {
-		this.label = label;
-	}
-
-	public void setLabels(List<String> labels) {
-		this.labels = labels;
-	}
 
 	public String getId() {
 		return id;
@@ -98,14 +66,6 @@ public class Article {
 
 	public void setCategoryId(String categoryId) {
 		this.categoryId = categoryId;
-	}
-
-	public String getContent() {
-		return content;
-	}
-
-	public void setContent(String content) {
-		this.content = content;
 	}
 
 	public String getType() {
@@ -141,11 +101,11 @@ public class Article {
 	}
 
 	public String getLabels() {
-		return label;
+		return labels;
 	}
 
-	public void setLabels(String label) {
-		this.label = label;
+	public void setLabels(String labels) {
+		this.labels = labels;
 	}
 
 	public long getViewCount() {
@@ -172,11 +132,4 @@ public class Article {
 		this.updateTime = updateTime;
 	}
 
-	public SobUserNoPassword getSobUser() {
-		return sobUser;
-	}
-
-	public void setSobUser(SobUserNoPassword sobUser) {
-		this.sobUser = sobUser;
-	}
 }

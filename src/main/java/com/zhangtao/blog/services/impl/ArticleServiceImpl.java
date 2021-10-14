@@ -1,11 +1,13 @@
 package com.zhangtao.blog.services.impl;
 
+import java.util.ArrayList;
 import java.util.Date;
-
-import javax.websocket.Decoder.Text;
+import java.util.List;
 
 import com.zhangtao.blog.dao.ArticleDao;
+import com.zhangtao.blog.dao.ArticleNoContentDao;
 import com.zhangtao.blog.pojo.Article;
+import com.zhangtao.blog.pojo.ArticleNoContent;
 import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IArticleService;
@@ -15,8 +17,19 @@ import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.TextUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import javax.xml.soap.Text;
 
 @Service
 @Transactional
@@ -30,6 +43,9 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
 
     @Autowired
     private ArticleDao articleDao;
+
+    @Autowired
+    private ArticleNoContentDao articleNoContentDao;
 
     /**
      * 后期可以去做一些定时发布的功能 如果是多人博客系统，得考虑审核的问题--->成功,通知，审核不通过，也可通知
@@ -131,6 +147,136 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         // 如果要做程序自动保存成草稿（比如说每30秒保存一次，就需要加上这个ID了，否则会创建多个Item）
         return ResponseResult.SUCCESS(Constants.Article.STATE_DRAFT.equals(state) ? "草稿保存成功" : "文章发表成功.")
                 .setData(article.getId());
+    }
+
+    /**
+     *
+     * 管理-获取文章列表
+     *
+     * @param page
+     * @param size
+     * @param state 删除、草稿、发表、置顶
+     * @param keyword
+     * @param categoryId
+     * @return
+     */
+    @Override
+    public ResponseResult listArticle(int page, int size, String state, String keyword, String categoryId) {
+        //检查参数
+        page = checkPage(page);
+        size = checkSize(size);
+        //创建查询条件
+        Sort sort = new Sort(Sort.Direction.DESC, "createTime");
+        Pageable pageable = new PageRequest(page, size, sort);
+        Page<ArticleNoContent> all = articleNoContentDao.findAll(new Specification<ArticleNoContent>() {
+            @Override
+            public Predicate toPredicate(Root<ArticleNoContent> root, CriteriaQuery<?> aq, CriteriaBuilder cb) {
+                List<Predicate> predicates = new ArrayList<>();
+                if (!TextUtils.isEmpty(state)) {
+                    Predicate preState = cb.equal(root.get("state").as(String.class), state);
+                    predicates.add(preState);
+                }
+                if (!TextUtils.isEmpty(keyword)) {
+                    Predicate perKeyword = cb.like(root.get("title").as(String.class), "%" + keyword + "%");
+                    predicates.add(perKeyword);
+                }
+                if (!TextUtils.isEmpty(categoryId)) {
+                    Predicate preCategory = cb.equal(root.get("categoryId").as(String.class), categoryId);
+                    predicates.add(preCategory);
+                }
+                Predicate[] perArray = new Predicate[predicates.size()];
+                predicates.toArray(perArray);
+                return cb.and(perArray);
+            }
+        }, pageable);
+        //返回结果
+        return ResponseResult.SUCCESS("获取文章列表成功.").setData(all);
+    }
+
+    @Override
+    public ResponseResult getArticle(String articleId) {
+        Article article = articleDao.findOneById(articleId);
+        if (article == null) {
+            return ResponseResult.FAILED("该文章不存在");
+        }
+        //普通用户只可以获取置顶、发表的文章
+        if(Constants.Article.STATE_PUBLISH.equals(article.getState())
+        && Constants.Article.STATE_TOP.equals(article.getState())){
+            ResponseResult.SUCCESS("获取文章成功.").setData(article);
+        }
+        //判断管理员身份
+        SobUser sobUser = userService.checkSobUser();
+        if(sobUser == null || !Constants.User.ROLE_ADMIN.equals(sobUser.getRoles()) ){
+            return ResponseResult.PERMISSION_FORBID();
+        }
+        return ResponseResult.SUCCESS("获取文章成功.").setData(article);
+    }
+
+    /**
+     * 更新文章信息
+     * 标题、内容、标签、分类、摘要
+     * @param articleId
+     * @param article
+     * @return
+     */
+    @Override
+    public ResponseResult updateArticle(String articleId, Article article) {
+        Article articleFormDb = articleDao.findOneById(articleId);
+        if (articleFormDb == null) {
+            return ResponseResult.FAILED("需要修改的文章不存在");
+        }
+        String title = article.getTitle();
+        if (!TextUtils.isEmpty(title)) {
+            articleFormDb.setTitle(title);
+        }
+        String content = article.getContent();
+        if (!TextUtils.isEmpty(content)) {
+            articleFormDb.setTitle(content);
+        }
+        String label = article.getLabel();
+        if (!TextUtils.isEmpty(label)) {
+            articleFormDb.setTitle(label);
+        }
+        String categoryId = article.getCategoryId();
+        if (!TextUtils.isEmpty(categoryId)) {
+            articleFormDb.setTitle(categoryId);
+        }
+        String summary = article.getSummary();
+        if (!TextUtils.isEmpty(summary)) {
+            articleFormDb.setTitle(summary);
+        }
+        articleFormDb.setCover(article.getCover());
+        articleFormDb.setUpdateTime(new Date());
+        articleDao.save(articleFormDb);
+        return ResponseResult.SUCCESS("文章更新成功.");
+    }
+
+    @Override
+    public ResponseResult deleteArticle(String articleId) {
+        int result = articleDao.deleteAllById(articleId);
+        return getDeleteResult(result, "文章");
+    }
+
+    @Override
+    public ResponseResult deleteArticleByState(String articleId) {
+        int result = articleDao.deleteArticleByUpdateState(articleId);
+        return getDeleteResult(result, "文章");
+    }
+
+    @Override
+    public ResponseResult topArticle(String articleId) {
+       Article articleFromDb = articleDao.findOneById(articleId);
+       if(articleFromDb == null){
+           return ResponseResult.FAILED("文章不存在.");
+       }
+       String state = articleFromDb.getState();
+       if(Constants.Article.STATE_PUBLISH.equals(state)){
+           return ResponseResult.SUCCESS("文章置顶成功.");
+       }
+        if(Constants.Article.STATE_TOP.equals(state)){
+            return ResponseResult.SUCCESS("取消置顶成功.");
+        }
+        return ResponseResult.FAILED("置顶文章失败");
     }
 
 }

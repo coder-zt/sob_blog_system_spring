@@ -67,9 +67,11 @@ public interface Constants {
     }
 
     interface Article {
+        String STATE_DELETE = "0";
         String STATE_DRAFT = "1";
         String STATE_PUBLISH = "2";
+        String STATE_TOP = "3";
         int TITLE_MAX_LENGTH = 128;
-        int SUMMARY_MAC_LENGTH = 256;
+        int SUMMARY_MAX_LENGTH = 256;
     }
 }

@@ -547,7 +547,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
         //开始查询用户数据
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
         Pageable pageable = new PageRequest(page - 1, size, sort);
-        Page<SobUser> all = userDao.listAllUserNoPassword(pageable);
+        Page<SobUser> all = userDao.findAll(pageable);
         return ResponseResult.SUCCESS("获取用户列表成功").setData(all);
     }
 

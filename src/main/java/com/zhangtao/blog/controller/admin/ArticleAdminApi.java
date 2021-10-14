@@ -5,6 +5,7 @@ import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IArticleService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -23,6 +24,7 @@ public class ArticleAdminApi {
      * @param article
      * @return
      */
+    @PreAuthorize("@permission.adminPermission()")
     @PostMapping
     public ResponseResult postArticle(@RequestBody Article article) {
         return articleService.postArticle(article);
@@ -31,34 +33,37 @@ public class ArticleAdminApi {
     /**
      * 删除分类
      *
-     * @param iamgeId
+     * @param articleId
      * @return
      */
-    @DeleteMapping("/{iamgeId}")
-    public ResponseResult deleteArticle(@PathVariable("iamgeId") String iamgeId) {
-        return null;
+    @PreAuthorize("@permission.adminPermission()")
+    @DeleteMapping("/{articleId}")
+    public ResponseResult deleteArticle(@PathVariable("articleId") String articleId) {
+        return articleService.deleteArticle(articleId);
     }
 
     /**
-     * 修改分类
+     * 修改文章
      *
-     * @param iamgeId
+     * @param articleId
      * @return
      */
-    @PutMapping("/{iamgeId}")
-    public ResponseResult updateArticle(@PathVariable("iamgeId") String iamgeId, @RequestBody Article article) {
-        return null;
+    @PreAuthorize("@permission.adminPermission()")
+    @PutMapping("/{articleId}")
+    public ResponseResult updateArticle(@PathVariable("articleId") String articleId, @RequestBody Article article) {
+        return articleService.updateArticle(articleId,article);
     }
 
     /**
-     * 获取分类
+     * 获取文章详情
      *
-     * @param iamgeId
+     * @param articleId
      * @return
      */
-    @GetMapping("/{iamgeId}")
-    public ResponseResult getArticle(@PathVariable("iamgeId") String iamgeId) {
-        return null;
+    @PreAuthorize("@permission.adminPermission()")
+    @GetMapping("/{articleId}")
+    public ResponseResult getArticle(@PathVariable("articleId") String articleId) {
+        return articleService.getArticle(articleId);
     }
 
     /**
@@ -68,21 +73,26 @@ public class ArticleAdminApi {
      * @param size
      * @return
      */
-    @GetMapping("/list")
-    public ResponseResult addArticle(@RequestParam("page") int page, @RequestParam("size") int size) {
-        return null;
+    @PreAuthorize("@permission.adminPermission()")
+    @GetMapping("/list/{page}/{size}")
+    public ResponseResult listArticle(@PathVariable("page") int page,
+                                        @PathVariable("size")int size,
+                                        @RequestParam(value = "state", required = false) String state,
+                                        @RequestParam(value = "keyword", required = false) String keyword,
+                                        @RequestParam(value = "categoryId", required = false) String categoryId) {
+        return articleService.listArticle(page, size,state, keyword, categoryId);
     }
 
-    @PutMapping("/state/{articleId}/{state}")
-    public ResponseResult updateArticleState(@PathVariable("articleId") String articleId,
-            @PathVariable("state") String state) {
-
-        return null;
+    @PreAuthorize("@permission.adminPermission()")
+    @DeleteMapping("/state/{articleId}")
+    public ResponseResult deleteArticleByState(@PathVariable("articleId") String articleId) {
+        return articleService.deleteArticleByState(articleId);
     }
 
+    @PreAuthorize("@permission.adminPermission()")
     @PutMapping("/top/{articleId}")
-    public ResponseResult updateArticle(@PathVariable("articleId") String articleId) {
+    public ResponseResult topArticle(@PathVariable("articleId") String articleId) {
 
-        return null;
+        return articleService.topArticle(articleId);
     }
 }
