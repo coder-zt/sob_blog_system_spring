@@ -7,6 +7,7 @@ import com.zhangtao.blog.pojo.Hourse;
 import com.zhangtao.blog.pojo.Label;
 import com.zhangtao.blog.pojo.User;
 import com.zhangtao.blog.responese.ResponseResult;
+import com.zhangtao.blog.services.impl.SolrTestService;
 import com.zhangtao.blog.utils.Constants;
 import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.RedisUtils;
@@ -32,7 +33,7 @@ import java.util.Date;
 import java.util.List;
 
 @Slf4j
-@RestController // @Controller
+@RestController
 @Transactional
 @RequestMapping("/test")
 public class TestController {
@@ -75,7 +76,7 @@ public class TestController {
         // 补全数据
         label.setId(String.valueOf(idWorker.nextId()));
         label.setCreateTime(new Date());
-        label.setUpdate_time(new Date());
+        label.setUpdateTime(new Date());
         // 保存数据
         labelDao.save(label);
         return ResponseResult.SUCCESS("添加标签成功");
@@ -100,7 +101,7 @@ public class TestController {
         }
         updateLabel.setName(label.getName());
         updateLabel.setCount(label.getCount());
-        updateLabel.setUpdate_time(new Date());
+        updateLabel.setUpdateTime(new Date());
         labelDao.save(updateLabel);
         return ResponseResult.SUCCESS("修改成功");
     }
@@ -162,6 +163,40 @@ public class TestController {
 
         // 输出图片流
         specCaptcha.out(response.getOutputStream());
+    }
+
+    @Autowired
+    private SolrTestService solrTestService;
+
+    @PostMapping("/solr")//http://localhost:2021/test/solr
+    public ResponseResult solrAddTest(){
+        solrTestService.add();
+        return ResponseResult.SUCCESS("测试成功");
+    }
+
+    @PostMapping("/solr/all")//http://localhost:2021/test/solr
+    public ResponseResult solrAddAllTest(){
+        solrTestService.importAll();
+        return ResponseResult.SUCCESS("测试成功");
+    }
+
+
+    @PutMapping("/solr")//http://localhost:2021/test/solr
+    public ResponseResult solrUpdateTest(){
+        solrTestService.update();
+        return ResponseResult.SUCCESS("测试更新成功");
+    }
+
+    @DeleteMapping("/solr")//http://localhost:2021/test/solr
+    public ResponseResult solrDeleteTest(){
+        solrTestService.delete();
+        return ResponseResult.SUCCESS("测试删除成功");
+    }
+
+    @DeleteMapping("/solr/all")//http://localhost:2021/test/solr
+    public ResponseResult solrDeleteAllTest(){
+        solrTestService.deleteAll();
+        return ResponseResult.SUCCESS("测试删除成功");
     }
 }
 // Successfully created project 'sob_blog_system_spring' on GitHub, but initial

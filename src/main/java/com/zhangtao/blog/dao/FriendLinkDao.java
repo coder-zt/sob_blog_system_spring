@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
+
 public interface FriendLinkDao extends JpaRepository<FriendLink, String>, JpaSpecificationExecutor<FriendLink> {
 
     /**
@@ -24,6 +26,9 @@ public interface FriendLinkDao extends JpaRepository<FriendLink, String>, JpaSpe
      * @return
      */
     @Modifying
-    @Query(nativeQuery = true, value = "update `tb_friend_link` set `status` = 1 where `id` = ?;")
+    @Query(nativeQuery = true, value = "update `tb_friends` set `state` = 1 where `id` = ?;")
     int deleteFriendLinkByUpdateStatus(String friendLinkId);
+
+    @Query(nativeQuery = true, value = "select * from `tb_friends` where `state` = ?;")
+    List<FriendLink> listFriendLinkByState(String s);
 }

@@ -1,23 +1,22 @@
 package com.zhangtao.blog.services.impl;
 
 import com.zhangtao.blog.dao.FriendLinkDao;
-import com.zhangtao.blog.pojo.Category;
 import com.zhangtao.blog.pojo.FriendLink;
+import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IFriendLinkService;
+import com.zhangtao.blog.services.IUserService;
 import com.zhangtao.blog.utils.Constants;
 import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.TextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.util.Date;
+import java.util.List;
 
 @Service
 @Transactional
@@ -29,6 +28,9 @@ public class FriendLinkServiceImpl extends BaseService implements IFriendLinkSer
 
     @Autowired
     private FriendLinkDao friendLinkDao;
+
+    @Autowired
+    private IUserService userService;
 
     @Override
     public ResponseResult addFriendLink(FriendLink friendFlink) {
@@ -66,15 +68,17 @@ public class FriendLinkServiceImpl extends BaseService implements IFriendLinkSer
     }
 
     @Override
-    public ResponseResult listFriendLinks(int page, int size) {
-        ///参数检查
-        page = checkPage(page);
-        size = checkSize(size);
+    public ResponseResult listFriendLinks() {
         //创建查询条件
         Sort sort = new Sort(Sort.Direction.DESC, "createTime", "order");
-        Pageable pageable = new PageRequest(page-1, size, sort);
+        SobUser sobUser = userService.checkSobUser();
+        List<FriendLink> all;
+        if(sobUser == null || !Constants.User.ROLE_ADMIN.equals(sobUser.getRoles())){
+            all = friendLinkDao.listFriendLinkByState("1");
+        }else{
+            all = friendLinkDao.findAll(sort);
+        }
         //查询
-        Page<FriendLink> all = friendLinkDao.findAll(pageable);
         //返回结果
         return ResponseResult.SUCCESS("获取链接列表成功").setData(all);
     }

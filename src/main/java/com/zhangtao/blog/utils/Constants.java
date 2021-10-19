@@ -10,6 +10,7 @@ public interface Constants {
     interface TimeValueInSecond {
 
         int MINUTE = 60;
+        int MINUTE_5 = 60 * 5;
         int HOUR = 60 * MINUTE;
         int HOUR_2 = HOUR * 2;
         int DAY = HOUR * 24;
@@ -68,10 +69,21 @@ public interface Constants {
 
     interface Article {
         String STATE_DELETE = "0";
-        String STATE_DRAFT = "1";
-        String STATE_PUBLISH = "2";
+        String STATE_PUBLISH = "1";
+        String TYPE_MARKDOWN = "1";
+        String TYPE_RICH_TEXT = "0";
+        String STATE_DRAFT = "2";
         String STATE_TOP = "3";
         int TITLE_MAX_LENGTH = 128;
         int SUMMARY_MAX_LENGTH = 256;
+        String KEY_REDIS_ARTICLE_CACHE = "key_redis_article_cache_";
+        String KEY_REDIS_ARTICLE_VIEW_COUNT = "key_redis_article_view_count_";
+        String KEY_REDIS_ARTICLE_LIST_CACHE = "key_redis_article_list_cache_";
+    }
+
+    interface Comment {
+        String STATE_PUBLISH = "1";
+        String STATE_TOP = "3";
+        String REDIS_COMMENT_FIRST_PAGE_CACHE = "redis_comment_first_page_cache_";
     }
 }

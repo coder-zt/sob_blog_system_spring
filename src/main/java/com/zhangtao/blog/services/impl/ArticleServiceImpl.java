@@ -1,19 +1,21 @@
 package com.zhangtao.blog.services.impl;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
+import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
 import com.zhangtao.blog.dao.ArticleDao;
 import com.zhangtao.blog.dao.ArticleNoContentDao;
-import com.zhangtao.blog.pojo.Article;
-import com.zhangtao.blog.pojo.ArticleNoContent;
-import com.zhangtao.blog.pojo.SobUser;
+import com.zhangtao.blog.dao.CommentDao;
+import com.zhangtao.blog.dao.LabelDao;
+import com.zhangtao.blog.pojo.*;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IArticleService;
+import com.zhangtao.blog.services.ISolrService;
 import com.zhangtao.blog.services.IUserService;
 import com.zhangtao.blog.utils.Constants;
 import com.zhangtao.blog.utils.IdWorker;
+import com.zhangtao.blog.utils.RedisUtils;
 import com.zhangtao.blog.utils.TextUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +31,6 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import javax.xml.soap.Text;
 
 @Service
 @Transactional
@@ -39,6 +40,9 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
     private IdWorker idWorker;
 
     @Autowired
+    private Random random;
+
+    @Autowired
     private IUserService userService;
 
     @Autowired
@@ -46,6 +50,18 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
 
     @Autowired
     private ArticleNoContentDao articleNoContentDao;
+
+    @Autowired
+    private LabelDao labelDao;
+
+    @Autowired
+    private ISolrService solrService;
+
+    @Autowired
+    private RedisUtils redisUtils;
+
+    @Autowired
+    private Gson gson;
 
     /**
      * 后期可以去做一些定时发布的功能 如果是多人博客系统，得考虑审核的问题--->成功,通知，审核不通过，也可通知
@@ -141,12 +157,39 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         article.setUpdateTime(new Date());
         // 保存到数据库里
         articleDao.save(article);
-        // TODO:保存到搜索的数据库里
+        redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + article.getCategoryId());
+        redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
+        if ((Constants.Article.STATE_PUBLISH.equals(state))) {
+            solrService.addArticle(article);
+        }
         // 打散标签，入库，统计
+        setupLabels(article.getLabel());
         // 返回结果,只有一种case使用到这个ID
         // 如果要做程序自动保存成草稿（比如说每30秒保存一次，就需要加上这个ID了，否则会创建多个Item）
         return ResponseResult.SUCCESS(Constants.Article.STATE_DRAFT.equals(state) ? "草稿保存成功" : "文章发表成功.")
                 .setData(article.getId());
+    }
+
+    private void setupLabels(String labels) {
+        List<String> labelList = new ArrayList<>();
+        if(labels.contains("_")){
+            labelList.addAll(Arrays.asList(labels.split("_")));
+        }else{
+            labelList.add(labels);
+        }
+        for (String label : labelList) {
+            int result = labelDao.updateLabelCount(label);
+            if (result == 0) {
+                Label newLabel = new Label();
+                newLabel.setCount(1);
+                newLabel.setName(label);
+                newLabel.setId(idWorker.nextId() + "");
+                newLabel.setCreateTime(new Date());
+                newLabel.setUpdateTime(new Date());
+            }else{
+                labelDao.updateLabelTime(new Date(), label);
+            }
+        }
     }
 
     /**
@@ -165,6 +208,13 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         //检查参数
         page = checkPage(page);
         size = checkSize(size);
+        if(page == 1){
+            String articleListJson = (String) redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + categoryId);
+            if (!TextUtils.isEmpty(articleListJson)) {
+                PageList<ArticleNoContent> articleList = gson.fromJson(articleListJson,new TypeToken<PageList<ArticleNoContent>>() {}.getType());
+                return ResponseResult.SUCCESS("获取评论列表成功").setData(articleList);
+            }
+        }
         //创建查询条件
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
         Pageable pageable = new PageRequest(page, size, sort);
@@ -189,12 +239,26 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
                 return cb.and(perArray);
             }
         }, pageable);
+        PageList<ArticleNoContent> result = new PageList<>();
+        result.parsePage(all);
+        if(page == 1){
+            redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + categoryId, gson.toJson(result), Constants.TimeValueInSecond.MINUTE_5 );
+        }
         //返回结果
-        return ResponseResult.SUCCESS("获取文章列表成功.").setData(all);
+        return ResponseResult.SUCCESS("获取文章列表成功.").setData(result);
     }
 
+
     @Override
-    public ResponseResult getArticle(String articleId) {
+    public ResponseResult getArticleById(String articleId) {
+        //从redis中获取文章
+        String articleJson = (String) redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId);
+        if (!TextUtils.isEmpty(articleJson)) {
+            Article article = gson.fromJson(articleJson, Article.class);
+            //增加阅读量
+            redisUtils.incr(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, 1);
+            return ResponseResult.SUCCESS("获取文章成功.").setData(article);
+        }
         Article article = articleDao.findOneById(articleId);
         if (article == null) {
             return ResponseResult.FAILED("该文章不存在");
@@ -202,6 +266,20 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         //普通用户只可以获取置顶、发表的文章
         if(Constants.Article.STATE_PUBLISH.equals(article.getState())
         && Constants.Article.STATE_TOP.equals(article.getState())){
+            //正常访问
+            redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId, gson.toJson(article), Constants.TimeValueInSecond.MINUTE_5);
+            String viewCount = (String) redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId);
+            if (TextUtils.isEmpty(viewCount)) {
+                long newViewCount = article.getViewCount() + 1;
+                redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, String.valueOf(newViewCount));
+            }else{
+                //增加阅读量
+                long newCount = redisUtils.incr(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, 1);
+                article.setViewCount(newCount);
+                articleDao.save(article);
+                //更新solr的阅读量
+                solrService.updateArticle(articleId, article);
+            }
             ResponseResult.SUCCESS("获取文章成功.").setData(article);
         }
         //判断管理员身份
@@ -248,18 +326,33 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         articleFormDb.setCover(article.getCover());
         articleFormDb.setUpdateTime(new Date());
         articleDao.save(articleFormDb);
+        redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + article.getCategoryId());
+        redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
         return ResponseResult.SUCCESS("文章更新成功.");
     }
 
+    @Autowired
+    private CommentDao commentDao;
+
     @Override
     public ResponseResult deleteArticle(String articleId) {
+        //删除文章的评论B
+        commentDao.deleteAllByArticleId(articleId);
         int result = articleDao.deleteAllById(articleId);
+        if(result > 0){
+            redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId);
+            solrService.deleteArticle(articleId);
+        }
         return getDeleteResult(result, "文章");
     }
 
     @Override
     public ResponseResult deleteArticleByState(String articleId) {
         int result = articleDao.deleteArticleByUpdateState(articleId);
+        if (result>0) {
+            redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId);
+            solrService.deleteArticle(articleId);
+        }
         return getDeleteResult(result, "文章");
     }
 
@@ -277,6 +370,73 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
             return ResponseResult.SUCCESS("取消置顶成功.");
         }
         return ResponseResult.FAILED("置顶文章失败");
+    }
+
+    @Override
+    public ResponseResult getTopArticle() {
+        List<ArticleNoContent> result = articleNoContentDao.findAll(new Specification<ArticleNoContent>() {
+            @Override
+            public Predicate toPredicate(Root<ArticleNoContent> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder cb) {
+                return cb.equal(root.get("state").as(String.class), Constants.Article.STATE_TOP);
+            }
+        });
+        return ResponseResult.SUCCESS("获取置顶文章成功").setData(result);
+    }
+
+    @Override
+    public ResponseResult listRecommendArticles(String articleId, int size) {
+        Article articleFromDb = articleDao.findOneById(articleId);
+        if (articleFromDb == null) {
+            return ResponseResult.FAILED("文章不存在");
+        }
+        String labels = articleFromDb.getLabels();
+        List<String> articleLabels = new ArrayList<>();
+        if(!labels.contains("-")){
+            articleLabels.add(labels);
+        }else{
+            String[] splitLabels = labels.split("_");
+            articleLabels.addAll(Arrays.asList(splitLabels));
+        }
+        String targetLabel = articleLabels.get(random.nextInt(articleLabels.size()));
+        List<ArticleNoContent> listResultList = articleNoContentDao.listArticleByLikeLabel("%" + targetLabel + "%",
+                articleId, size);
+        if (listResultList.size() < size) {
+            int dxSize = size - listResultList.size();
+            List<ArticleNoContent> dxList = articleNoContentDao.listLastedArticleBySize(articleId, dxSize);
+            listResultList.addAll(dxList);
+        }
+        return ResponseResult.SUCCESS("获取推荐文章成功").setData(listResultList);
+    }
+
+    @Override
+    public ResponseResult listArticle(int page, int size, String label) {
+        //检查数据
+        page = checkPage(page);
+        size = checkSize(size);
+        //创建条件
+        Sort sort = new Sort(Sort.Direction.DESC, "createTime");
+        Pageable pageable = new PageRequest(page - 1, size, sort);
+        //查询数据
+        Page<ArticleNoContent> all = articleNoContentDao.findAll(new Specification<ArticleNoContent>() {
+            @Override
+            public Predicate toPredicate(Root<ArticleNoContent> root, CriteriaQuery<?> cq, CriteriaBuilder cb) {
+                Predicate labelsPre = cb.like(root.get("labels").as(String.class), "%" + label + "%");
+                Predicate publishPre = cb.equal(root.get("state").as(String.class), Constants.Article.STATE_PUBLISH);
+                Predicate topPre = cb.equal(root.get("state").as(String.class), Constants.Article.STATE_TOP);
+                Predicate or = cb.or(topPre, publishPre);
+                return cb.and(or, labelsPre);
+            }
+        }, pageable);
+        return ResponseResult.SUCCESS("获取文章成功").setData(all);
+    }
+
+    @Override
+    public ResponseResult listLabels(int size) {
+        size = checkSize(size);
+        Sort sort = new Sort(Sort.Direction.DESC, "count");
+        Pageable pageable = new PageRequest(0, size, sort);
+        Page<Label> all = labelDao.findAll(pageable);
+        return ResponseResult.SUCCESS("获取标签云成功");
     }
 
 }

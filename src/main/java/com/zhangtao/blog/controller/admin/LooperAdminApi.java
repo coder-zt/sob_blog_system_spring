@@ -64,13 +64,11 @@ public class LooperAdminApi {
     /**
      * 获取分类列表
      *
-     * @param page
-     * @param size
      * @return
      */
     @GetMapping("/list")
-    public ResponseResult listLoop(@RequestParam("page") int page, @RequestParam("size") int size) {
-        return looperService.listLoop(page, size);
+    public ResponseResult listLoop() {
+        return looperService.listLoop();
     }
 
 }

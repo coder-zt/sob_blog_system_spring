@@ -2,6 +2,11 @@ package com.zhangtao.blog.controller.portal;
 
 import com.zhangtao.blog.pojo.Comment;
 import com.zhangtao.blog.responese.ResponseResult;
+import com.zhangtao.blog.services.ICategoryService;
+import com.zhangtao.blog.services.IFriendLinkService;
+import com.zhangtao.blog.services.ILooperService;
+import com.zhangtao.blog.services.IWebsiteInfoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -12,6 +17,18 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/portal/web_size")
 public class WebSizePortalApi {
 
+    @Autowired
+    private ICategoryService categoryService;
+
+    @Autowired
+    private IFriendLinkService friendLinkService;
+
+    @Autowired
+    private ILooperService looperService;
+
+    @Autowired
+    private IWebsiteInfoService websiteInfoService;
+
     /**
      *获取文章分类
      *
@@ -19,7 +36,7 @@ public class WebSizePortalApi {
      */
     @GetMapping("/categorise")
     public ResponseResult getCategorise(){
-        return null;
+        return categoryService.listCategories();
     }
 
     /**
@@ -28,8 +45,8 @@ public class WebSizePortalApi {
      * @return
      */
     @GetMapping("/title")
-    public ResponseResult getWebSizeTitle(){
-        return null;
+    public ResponseResult getWebsiteTitle(){
+        return websiteInfoService.getWebsiteTitle();
     }
 
     /**
@@ -38,8 +55,8 @@ public class WebSizePortalApi {
      * @return
      */
     @GetMapping("/view_count")
-    public ResponseResult getWebSizeViewCount(){
-        return null;
+    public ResponseResult getWebsiteViewCount(){
+        return websiteInfoService.getWebsiteViewCount();
     }
 
     /**
@@ -48,8 +65,8 @@ public class WebSizePortalApi {
      * @return
      */
     @GetMapping("/seo")
-    public ResponseResult getWebSizeViewSEO(){
-        return null;
+    public ResponseResult getWebsiteViewSEO(){
+        return websiteInfoService.getSeoInfo();
     }
 
     /**
@@ -58,8 +75,8 @@ public class WebSizePortalApi {
      * @return
      */
     @GetMapping("/looper")
-    public ResponseResult getWebSizeLooper(){
-        return null;
+    public ResponseResult getWebsiteLooper(){
+        return looperService.listLoop();
     }
 
     /**
@@ -69,6 +86,11 @@ public class WebSizePortalApi {
      */
     @GetMapping("/friend_links")
     public ResponseResult getFriendLinks(){
-        return null;
+        return friendLinkService.listFriendLinks();
+    }
+
+    @PutMapping("/view_count")
+    public void updateViewCount(){
+        websiteInfoService.updateViewCount();
     }
 }

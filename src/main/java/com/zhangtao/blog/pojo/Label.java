@@ -28,16 +28,9 @@ public class Label {
 		this.createTime = create_time;
 	}
 
-	public Date getUpdate_time() {
-		return update_time;
-	}
-
-	public void setUpdate_time(Date update_time) {
-		this.update_time = update_time;
-	}
 
 	@Column(name = "update_time" )
-	private Date update_time;
+	private Date updateTime;
 
 
 	public String getId() {
@@ -66,4 +59,11 @@ public class Label {
 		this.count = count;
 	}
 
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
 }

@@ -2,8 +2,10 @@ package com.zhangtao.blog.services.impl;
 
 import com.zhangtao.blog.dao.CategoryDao;
 import com.zhangtao.blog.pojo.Category;
+import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.ICategoryService;
+import com.zhangtao.blog.services.IUserService;
 import com.zhangtao.blog.utils.Constants;
 import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.TextUtils;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.util.Date;
+import java.util.List;
 
 @Service
 @Transactional
@@ -29,6 +32,8 @@ public class CategoryServiceImpl extends BaseService implements ICategoryService
     @Autowired
     private CategoryDao categoryDao;
 
+    @Autowired
+    private IUserService userService;
 
     @Override
     public ResponseResult addCategory(Category category) {
@@ -64,17 +69,22 @@ public class CategoryServiceImpl extends BaseService implements ICategoryService
     }
 
     @Override
-    public ResponseResult listCategories(int page, int size) {
-        //参数检查
-       page = checkPage(page);
-       size = checkSize(size);
+    public ResponseResult listCategories() {
+
         //创建查询条件
         Sort sort = new Sort(Sort.Direction.DESC, "createTime", "order");
-        Pageable pageable = new PageRequest(page-1, size, sort);
+        //判断用户省份
+        SobUser sobUser = userService.checkSobUser();
         //查询
-        Page<Category> all = categoryDao.findAll(pageable);
+        //普通用户只能获取没有删除的分类，及state=1
+        List<Category> categories;
+        if(sobUser == null || !Constants.User.ROLE_ADMIN.equals(sobUser.getRoles())){
+            categories = categoryDao.findAllByState("1");
+        }else{
+            categories = categoryDao.findAll(sort);
+        }
         //返回结果
-        return ResponseResult.SUCCESS("获取分类列表成功").setData(all);
+        return ResponseResult.SUCCESS("获取分类列表成功").setData(categories);
     }
 
     @Override

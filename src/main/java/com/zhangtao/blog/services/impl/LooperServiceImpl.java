@@ -1,11 +1,15 @@
 package com.zhangtao.blog.services.impl;
 
 import java.util.Date;
+import java.util.List;
 
 import com.zhangtao.blog.dao.LoopDao;
+import com.zhangtao.blog.pojo.FriendLink;
 import com.zhangtao.blog.pojo.Looper;
+import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.ILooperService;
+import com.zhangtao.blog.services.IUserService;
 import com.zhangtao.blog.utils.Constants;
 import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.TextUtils;
@@ -27,6 +31,9 @@ public class LooperServiceImpl extends BaseService implements ILooperService {
 
     @Autowired
     private LoopDao loopDao;
+
+    @Autowired
+    private IUserService userService;
 
     @Override
     public ResponseResult addLooper(Looper looper) {
@@ -56,15 +63,19 @@ public class LooperServiceImpl extends BaseService implements ILooperService {
     }
 
     @Override
-    public ResponseResult listLoop(int page, int size) {
-        // 参数检查
-        page = checkPage(page);
-        size = checkSize(size);
-        // 创建查询条件
-        Sort sort = new Sort(Sort.Direction.DESC, "createTime");
-        Pageable pageable = new PageRequest(page - 1, size, sort);
-        Page<Looper> all = loopDao.findAll(pageable);
-        return ResponseResult.SUCCESS("查询数据成功！").setData(all);
+    public ResponseResult listLoop() {
+        //创建查询条件
+        Sort sort = new Sort(Sort.Direction.DESC, "createTime", "order");
+        SobUser sobUser = userService.checkSobUser();
+        //查询
+        List<Looper> all;
+        if(sobUser == null || !Constants.User.ROLE_ADMIN.equals(sobUser.getRoles())){
+            all = loopDao.listFriendLinkByState("1");
+        }else{
+            all = loopDao.findAll(sort);
+        }
+        //返回结果
+        return ResponseResult.SUCCESS("获取轮播图列表成功").setData(all);
     }
 
     @Override

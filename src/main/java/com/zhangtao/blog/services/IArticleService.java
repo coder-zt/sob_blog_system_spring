@@ -9,7 +9,7 @@ public interface IArticleService {
 
     ResponseResult listArticle(int page, int size, String state, String keyword, String categoryId);
 
-    ResponseResult getArticle(String articleId);
+    ResponseResult getArticleById(String articleId);
 
     ResponseResult updateArticle(String articleId, Article article);
 
@@ -18,4 +18,12 @@ public interface IArticleService {
     ResponseResult deleteArticleByState(String articleId);
 
     ResponseResult topArticle(String articleId);
+
+    ResponseResult getTopArticle();
+
+    ResponseResult listRecommendArticles(String articleId, int size);
+
+    ResponseResult listArticle(int page, int size, String label);
+
+    ResponseResult listLabels(int size);
 }

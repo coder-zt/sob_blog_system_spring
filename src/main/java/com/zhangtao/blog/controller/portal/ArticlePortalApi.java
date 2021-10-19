@@ -1,7 +1,9 @@
 package com.zhangtao.blog.controller.portal;
 
-import com.zhangtao.blog.pojo.Comment;
 import com.zhangtao.blog.responese.ResponseResult;
+import com.zhangtao.blog.services.IArticleService;
+import com.zhangtao.blog.utils.Constants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -12,35 +14,72 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/portal/article")
 public class ArticlePortalApi {
 
+    @Autowired
+    private IArticleService articleService;
+
     /**
      * @return
      */
     @GetMapping("/list/{page}/{size}")
     public ResponseResult listArticle(@PathVariable("page")int page, @PathVariable("size")int size){
-        return null;
+        return articleService.listArticle(page, size, Constants.Article.STATE_PUBLISH, null, null);
     }
 
     /**
      * @return
      */
-    @GetMapping("/list/{categoryID}/{page}/{size}")
-    public ResponseResult listArticleById(@PathVariable("categoryId")int categoryId, @PathVariable("page")int page, @PathVariable("size")int size){
-        return null;
+    @GetMapping("/list/{categoryId}/{page}/{size}")
+    public ResponseResult listArticleByCategoryId(@PathVariable("categoryId")String categoryId,
+                                          @PathVariable("page")int page,
+                                          @PathVariable("size")int size){
+        return articleService.listArticle(page, size, Constants.Article.STATE_PUBLISH, null, categoryId);
     }
     /**
+     * 获取文章详情
+     *
      * @return
      */
     @GetMapping("/{articleId}}")
     public ResponseResult getArticleDetail(@PathVariable("articleId")String articleId){
-        return null;
+        return articleService.getArticleById(articleId);
     }
+
+    /**
+     *
+     * 获取推荐文章
+     *
+     * @return
+     */
+    @GetMapping("/recommend/{articleId}/{size}")
+    public ResponseResult getRecommendArticles(@PathVariable("articleId")String articleId, @PathVariable("size")int size){
+        return articleService.listRecommendArticles(articleId, size);
+    }
+
+    /**
+     * 获取置顶文章
+     * @return
+     */
+    @GetMapping("/top")
+    public ResponseResult getTopArticle(){
+        return articleService.getTopArticle();
+    }
+
 
     /**
      * @return
      */
-    @GetMapping("/recommend/{articleId}}")
-    public ResponseResult getRecommendArticles(@PathVariable("articleId")String articleId){
-        return null;
+    @GetMapping("/list/label/{label}/{page}/{size}")
+    public ResponseResult listArticleByLabel(@PathVariable("label")String label, @PathVariable("page")int page, @PathVariable("size")int size){
+        return articleService.listArticle(page, size,label);
     }
 
+    /**
+     * 获取标签云
+     * @param size
+     * @return
+     */
+    @GetMapping("/label/{size}")
+    public ResponseResult getLabels(@PathVariable("size") int size){
+        return articleService.listLabels(size);
+    }
 }

@@ -70,13 +70,11 @@ public class CategoryAdminApi {
      *
      * 管理员权限
      *
-     * @param page
-     * @param size
      * @return
      */
     @PreAuthorize("@permission.adminPermission()")
-    @GetMapping("/list/{page}/{size}")
-    public ResponseResult listCategories(@PathVariable("page") int page, @PathVariable("size") int size){
-        return categoryService.listCategories(page, size);
+    @GetMapping("/list")
+    public ResponseResult listCategories(){
+        return categoryService.listCategories();
     }
 }

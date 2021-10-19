@@ -43,21 +43,6 @@ public class ImageAdminApi {
         return imageService.deleteImage(imageId);
     }
 
-    /**
-     * 获取图片
-     *
-     * @param imageId
-     * @return
-     */
-    @PreAuthorize("@permission.adminPermission()")
-    @GetMapping("/{imageId}")
-    public void viewImage(@PathVariable("imageId") String imageId){
-        try {
-            imageService. viewImage(imageId);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * 获取图片列表

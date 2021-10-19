@@ -7,7 +7,7 @@ public interface ILooperService {
 
     ResponseResult addLooper(Looper looper);
 
-    ResponseResult listLoop(int page, int size);
+    ResponseResult listLoop();
 
     ResponseResult getLoop(String looperId);
 

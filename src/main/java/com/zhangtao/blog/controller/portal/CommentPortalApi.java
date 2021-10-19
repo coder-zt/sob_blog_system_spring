@@ -2,6 +2,8 @@ package com.zhangtao.blog.controller.portal;
 
 import com.zhangtao.blog.pojo.Comment;
 import com.zhangtao.blog.responese.ResponseResult;
+import com.zhangtao.blog.services.ICommentService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -12,26 +14,29 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/portal/comment")
 public class CommentPortalApi {
 
+
+    @Autowired
+    private ICommentService commentService;
+
     /**
-     * 添加分类
+     * 发表评论
      *
      * @param comment
      * @return
      */
     @PostMapping
     public ResponseResult postComment(@RequestBody Comment comment){
-        return null;
+        return commentService.postComment(comment);
     }
 
     /**
-     * 删除分类
+     * 删除评论
      *
-     * @param commentId
      * @return
      */
     @DeleteMapping("/{commentId}")
     public ResponseResult deleteComment(@PathVariable("commentId") String commentId){
-        return null;
+        return commentService.deleteCommentById(commentId);
     }
 
     /**
@@ -40,9 +45,10 @@ public class CommentPortalApi {
      * @param articleId
      * @return
      */
-    @GetMapping("/list/{articleId}")
-    public ResponseResult listArticleComments(@PathVariable("articleId") String articleId){
-        return null;
+    @GetMapping("/list/{articleId}/{page}/{size}")
+    public ResponseResult listArticleComments(@PathVariable("articleId") String articleId,
+                                              @PathVariable("page")int page, @PathVariable("size") int size){
+        return commentService.listArticleComments(articleId, page, size);
     }
 
 }

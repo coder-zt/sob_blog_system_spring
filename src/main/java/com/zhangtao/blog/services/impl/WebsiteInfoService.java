@@ -10,6 +10,7 @@ import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IWebsiteInfoService;
 import com.zhangtao.blog.utils.Constants;
 import com.zhangtao.blog.utils.IdWorker;
+import com.zhangtao.blog.utils.RedisUtils;
 import com.zhangtao.blog.utils.TextUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class WebsiteInfoService implements IWebsiteInfoService {
 
     @Autowired
     private IdWorker IdWorker;
+
+    @Autowired
+    private RedisUtils redisUtils;
 
     @Override
     public ResponseResult getWebsiteTitle() {
@@ -102,19 +106,47 @@ public class WebsiteInfoService implements IWebsiteInfoService {
      */
     @Override
     public ResponseResult getWebsiteViewCount() {
+        String viewCount = (String)redisUtils.get(Constants.Settings.WEBSITE_VIEW_COUNT);
         Settings viewCountFromDb = settingDao.findOneByKey(Constants.Settings.WEBSITE_VIEW_COUNT);
         if (viewCountFromDb == null) {
-            viewCountFromDb = new Settings();
-            viewCountFromDb.setKey(Constants.Settings.WEBSITE_VIEW_COUNT);
-            viewCountFromDb.setId(IdWorker.nextId() + "");
-            viewCountFromDb.setCreateTime(new Date());
-            viewCountFromDb.setUpdateTime(new Date());
-            viewCountFromDb.setValue("1");
+            viewCountFromDb = initViewItem();
+            settingDao.save(viewCountFromDb);
+        }
+        if (TextUtils.isEmpty(viewCount)) {
+            viewCount = viewCountFromDb.getValue();
+            redisUtils.set(Constants.Settings.WEBSITE_VIEW_COUNT, viewCount);
+        }else{
+            viewCountFromDb.setValue(viewCount);
             settingDao.save(viewCountFromDb);
         }
         Map<String, String> result = new HashMap<>();
         result.put(viewCountFromDb.getKey(), viewCountFromDb.getValue());
         return ResponseResult.SUCCESS("网站浏览量查询成功").setData(result);
+    }
+
+    @Override
+    public void updateViewCount() {
+        Object viewCount = redisUtils.get(Constants.Settings.WEBSITE_VIEW_COUNT);
+        if (viewCount == null) {
+            Settings viewCountSetting = settingDao.findOneByKey(Constants.Settings.WEBSITE_VIEW_COUNT);
+            if (viewCountSetting == null) {
+                viewCountSetting = initViewItem();
+                settingDao.save(viewCountSetting);
+            }
+            redisUtils.set(Constants.Settings.WEBSITE_VIEW_COUNT, viewCountSetting.getValue());
+        }else{
+            redisUtils.incr(Constants.Settings.WEBSITE_VIEW_COUNT, 1);
+        }
+    }
+
+    private Settings initViewItem() {
+        Settings viewCount = new Settings();
+        viewCount.setKey(Constants.Settings.WEBSITE_VIEW_COUNT);
+        viewCount.setId(IdWorker.nextId() + "");
+        viewCount.setCreateTime(new Date());
+        viewCount.setUpdateTime(new Date());
+        viewCount.setValue("1");
+        return viewCount;
     }
 
 }

@@ -78,6 +78,6 @@ public class FriendLinkAdminApi {
     @PreAuthorize("@permission.adminPermission()")
     @GetMapping("/list/{page}/{size}")
     public ResponseResult listFriendLinks(@PathVariable("page") int page, @PathVariable("size") int size){
-        return friendLinkService.listFriendLinks(page, size);
+        return friendLinkService.listFriendLinks();
     }
 }
