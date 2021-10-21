@@ -1,5 +1,6 @@
 package com.zhangtao.blog.controller.admin;
 
+import com.zhangtao.blog.interceptor.CheckTooFrequentCommit;
 import com.zhangtao.blog.pojo.FriendLink;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IFriendLinkService;
@@ -26,6 +27,7 @@ public class FriendLinkAdminApi {
      * @param friendFlink
      * @return
      */
+    @CheckTooFrequentCommit
     @PreAuthorize("@permission.adminPermission()")
     @PostMapping
     public ResponseResult addFriends(@RequestBody FriendLink friendFlink){
@@ -50,6 +52,7 @@ public class FriendLinkAdminApi {
      * @param friendLinkId
      * @return
      */
+    @CheckTooFrequentCommit
     @PreAuthorize("@permission.adminPermission()")
     @PutMapping("/{friendLinkId}")
     public ResponseResult updateFriendLink(@PathVariable("friendLinkId") String friendLinkId, @RequestBody FriendLink friendFlink){

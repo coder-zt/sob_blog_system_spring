@@ -14,8 +14,9 @@ public class ClaimsUtils {
     public static final String AVATARS = "avatars";
     public static final String EMAIL = "email";
     public static final String SIGN = "sign";
+    public static final String FROM = "from";
 
-    public static Map<String, Object> sobUser2Claims(SobUser sobUser) {
+    public static Map<String, Object> sobUser2Claims(SobUser sobUser, String from) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(ID, sobUser.getId());
         claims.put(USER_NAME, sobUser.getUserName());
@@ -23,8 +24,11 @@ public class ClaimsUtils {
         claims.put(AVATARS, sobUser.getAvatar());
         claims.put(EMAIL, sobUser.getEmail());
         claims.put(SIGN, sobUser.getSign());
+        claims.put(FROM, from);
         return claims;
     }
+
+
 
     public static SobUser claims2SobUser(Claims claims) {
         SobUser sobUser = new SobUser();
@@ -43,4 +47,7 @@ public class ClaimsUtils {
         return sobUser;
     }
 
+    public static String getFrom(Claims claims) {
+        return (String)claims.get(FROM);
+    }
 }

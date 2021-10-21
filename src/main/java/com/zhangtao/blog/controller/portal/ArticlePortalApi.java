@@ -2,6 +2,7 @@ package com.zhangtao.blog.controller.portal;
 
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IArticleService;
+import com.zhangtao.blog.services.ICategoryService;
 import com.zhangtao.blog.utils.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,20 @@ public class ArticlePortalApi {
 
     @Autowired
     private IArticleService articleService;
+
+    @Autowired
+    private ICategoryService categoryService;
+
+    /**
+     *获取文章分类
+     *
+     * @return
+     */
+    @GetMapping("/categorise")
+    public ResponseResult getCategorise(){
+        return categoryService.listCategories();
+    }
+
 
     /**
      * @return

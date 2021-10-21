@@ -1,5 +1,6 @@
 package com.zhangtao.blog.controller.portal;
 
+import com.zhangtao.blog.interceptor.CheckTooFrequentCommit;
 import com.zhangtao.blog.pojo.Comment;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.ICommentService;
@@ -24,6 +25,7 @@ public class CommentPortalApi {
      * @param comment
      * @return
      */
+    @CheckTooFrequentCommit
     @PostMapping
     public ResponseResult postComment(@RequestBody Comment comment){
         return commentService.postComment(comment);

@@ -1,5 +1,6 @@
 package com.zhangtao.blog.controller.admin;
 
+import com.zhangtao.blog.interceptor.CheckTooFrequentCommit;
 import com.zhangtao.blog.pojo.Looper;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.ILooperService;
@@ -23,6 +24,7 @@ public class LooperAdminApi {
      * @param loop
      * @return
      */
+    @CheckTooFrequentCommit
     @PostMapping
     public ResponseResult addLooper(@RequestBody Looper looper) {
         return looperService.addLooper(looper);

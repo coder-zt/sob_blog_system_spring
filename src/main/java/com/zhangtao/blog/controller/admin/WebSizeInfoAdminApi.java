@@ -1,5 +1,6 @@
 package com.zhangtao.blog.controller.admin;
 
+import com.zhangtao.blog.interceptor.CheckTooFrequentCommit;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IWebsiteInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ public class WebSizeInfoAdminApi {
         return websiteInfoService.getWebsiteTitle();
     }
 
+    @CheckTooFrequentCommit
     @PutMapping("/title")
     public ResponseResult updateWebSizeTitle(@RequestParam("title")String title){
         return websiteInfoService.updateWebSiteTitle(title);
@@ -31,6 +33,7 @@ public class WebSizeInfoAdminApi {
         return websiteInfoService.getSeoInfo();
     }
 
+    @CheckTooFrequentCommit
     @PutMapping("/seo")
     public ResponseResult putSeoInfo(@RequestParam("keywords") String keywords, @RequestParam("description")String description){
         return websiteInfoService.putSeoInfo(keywords,description);

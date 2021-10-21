@@ -43,12 +43,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.transaction.Transactional;
-import java.util.Date;
-import java.util.Map;
-import java.util.Random;
 
 
 @Service
@@ -345,7 +339,10 @@ public class UserServiceImpl extends BaseService implements IUserService {
     }
 
     @Override
-    public ResponseResult doLogin(SobUser sobUser, String captchaKey, String captcha) {
+    public ResponseResult doLogin(SobUser sobUser, String captcha, String captchaKey, String from) {
+        if (TextUtils.isEmpty(from) || ( !Constants.FROM_MOBILE.equals(from) && !Constants.FROM_PC.equals(from))) {
+            from = Constants.FROM_MOBILE;
+        }
         //1. 判断图灵验证码是否正确
         String captchaValue = (String)redisUtils.get(Constants.User.KEY_REDIS_CAPTCHA + captchaKey);
         if (TextUtils.isEmpty(captchaValue) || !captchaValue.equals(captcha)) {
@@ -379,30 +376,46 @@ public class UserServiceImpl extends BaseService implements IUserService {
         if(!"1".equals(userFromDb.getState())){
             return ResponseResult.FAILED("当前账号已被禁止使用");
         }
-        createToken(userFromDb);
+        userFromDb.setLoginIp(getRequest().getRemoteAddr());
+        userFromDb.setUpdateTime(new Date());
+        createToken(userFromDb, from);
         return ResponseResult.SUCCESS("登录成功");
     }
 
-    private String createToken(SobUser userFromDb) {
-        int result = refreshTokenDao.deleteByUserId(userFromDb.getId());
-        log.info("删除用户的旧refreshToken ===> " + result);
+    private String createToken(SobUser userFromDb, String from) {
+        String oldTokenKey = CookieUtils.getCookie(getRequest(),Constants.User.COOKIE_TOKEN_EKY);
+        if(from.equals(Constants.FROM_MOBILE)){
+            refreshTokenDao.deleteMobileTokenKey(oldTokenKey);
+        }else if(from.equals(Constants.FROM_PC)){
+            refreshTokenDao.deletePcTokenKey(oldTokenKey);
+        }
         // 6. 生成token（有效时常两个小时）
-        Map<String, Object> claims = ClaimsUtils.sobUser2Claims(userFromDb);
+        Map<String, Object> claims = ClaimsUtils.sobUser2Claims(userFromDb, from);
         String token = JwtUtil.createToken(claims);
         // 7.将token的md5值返回给前端并作为key将token保存在redis中
-        String tokenKey = DigestUtils.md5DigestAsHex(token.getBytes());
+        String tokenKey = from + DigestUtils.md5DigestAsHex(token.getBytes());
         redisUtils.set(Constants.User.KEY_TOKEN + tokenKey,token, Constants.TimeValueInSecond.HOUR_2);
         // 8. 设置cookie
-        CookieUtils.setUpCookie(getResponse(),  Constants.User.COOKICE_TOKEN_EKY,tokenKey);
+        CookieUtils.setUpCookie(getResponse(),  Constants.User.COOKIE_TOKEN_EKY,tokenKey);
+        //更新数据库中的token
+        RefreshToken refreshToken = refreshTokenDao.findOneByUserId(userFromDb.getId());
+        if(refreshToken == null){
+            refreshToken = new RefreshToken();
+            refreshToken.setId(idWorker.nextId() + "");
+            refreshToken.setCreateTime(new Date());
+            refreshToken.setUserId(userFromDb.getId());
+        }
         // 9. 创建RefreshToken
         String refreshTokenValue = JwtUtil.createRefreshToken(userFromDb.getId(), Constants.TimeValueInMillions.MONTH);
         // TODO: 2021/10/8 保存到数据库
         // refreshToken、 tokenKey、 用户ID、 创建时间、 更新时间
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setId(idWorker.nextId() + "");
+
+        if(Constants.FROM_MOBILE.equals(from)){
+            refreshToken.setTokenKey(tokenKey);
+        }else{
+            refreshToken.setMobileTokenKey(tokenKey);
+        }
         refreshToken.setRefreshToken(refreshTokenValue);
-        refreshToken.setUserId(userFromDb.getId());
-        refreshToken.setCreateTime(new Date());
         refreshToken.setUpdateTime(new Date());
         refreshTokenDao.save(refreshToken);
         return tokenKey;
@@ -416,11 +429,21 @@ public class UserServiceImpl extends BaseService implements IUserService {
     @Override
     public SobUser checkSobUser() {
         //获取tokenKey
-        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKICE_TOKEN_EKY);
+        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_EKY);
+        if (tokenKey == null) {
+            return null;
+        }
+        // TODO: 2021/10/21  从token中解析是什么端的
         SobUser sobUser = parseByTokenKey(tokenKey);
+        String from = tokenKey.startsWith(Constants.FROM_PC)?Constants.FROM_PC:Constants.FROM_MOBILE;
         if (sobUser == null) {//登录已过期
             // 1.在mysql查询refreshToken
-            RefreshToken refreshToken = refreshTokenDao.findOneByTokenKey(tokenKey);
+            RefreshToken refreshToken = null;
+            if (Constants.FROM_PC.equals(from)) {
+                refreshToken = refreshTokenDao.findOneByTokenKey(tokenKey);
+            }else{
+                refreshToken = refreshTokenDao.findOneByMobileTokenKey(tokenKey);
+            }
             if(refreshToken == null){// 2. 不存在证明用户没有登录小于要重新登录
                 return null;
             }
@@ -430,7 +453,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
                 // 5. 没有报错证明refreshToken有效，创建新的token和新的refreshToken
                 String userId = refreshToken.getUserId();
                 SobUser userFromDb = userDao.findOneById(userId);
-                String newTokenKey = createToken(userFromDb);
+                String newTokenKey = createToken(userFromDb, from);
                 return parseByTokenKey(newTokenKey);
             }catch (Exception e){
                 // 4. refreshToken也过期了
@@ -512,7 +535,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
         userDao.save(userFromDb);
         //修改用户信息后，redis中的token的信息已经不正确了，所以需要删除token，下次请求就会重新生成新的token
         // 获取到当前权限所有的角色，进行角色对比即可确定权限
-        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKICE_TOKEN_EKY);
+        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_EKY);
         redisUtils.del(Constants.User.KEY_TOKEN + tokenKey);
         return ResponseResult.SUCCESS("用户信息更新成功");
     }
@@ -594,7 +617,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
 
     @Override
     public ResponseResult doLogout() {
-        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKICE_TOKEN_EKY);
+        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_EKY);
         if (TextUtils.isEmpty(tokenKey)) {
             return ResponseResult.ACCOUNT_NOT_LOGIN();
         }
@@ -603,7 +626,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
         //删除mysql中的refreshToken
         refreshTokenDao.deleteAllByTokenKey(tokenKey);
         //删除cookie中的tokenKey
-        CookieUtils.deleteCookie(getResponse(), Constants.User.COOKICE_TOKEN_EKY);
+        CookieUtils.deleteCookie(getResponse(), Constants.User.COOKIE_TOKEN_EKY);
         return ResponseResult.SUCCESS("退出登录成功.");
     }
 
@@ -622,6 +645,29 @@ public class UserServiceImpl extends BaseService implements IUserService {
                 //没有过期证明还在登录状态
                 Claims claims = JwtUtil.parseJWT(token);
                 return ClaimsUtils.claims2SobUser(claims);
+            }catch (Exception e){
+                //登录过期
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据tokenKey获取token并解析来自何端
+     *
+     * @param tokenKey
+     * @return
+     */
+    private String parseByFrom(String tokenKey) {
+        //1. 通过tokenKey获取redis中的token
+        String token = (String) redisUtils.get(Constants.User.KEY_TOKEN + tokenKey);
+        //2. 解析token
+        if (token != null) {
+            try {
+                //没有过期证明还在登录状态
+                Claims claims = JwtUtil.parseJWT(token);
+                return ClaimsUtils.getFrom(claims);
             }catch (Exception e){
                 //登录过期
                 return null;

@@ -2,13 +2,17 @@ package com.zhangtao.blog.utils;
 
 public interface Constants {
 
+    String FROM_PC = "p_";
+    String FROM_MOBILE = "m_";
+
     int DEFAULT_SIZE = 30;
 
     /**
      * 单位：秒
      */
     interface TimeValueInSecond {
-
+        int SECOND = 1;
+        int SECOND_10 = SECOND * 10;
         int MINUTE = 60;
         int MINUTE_5 = 60 * 5;
         int HOUR = 60 * MINUTE;
@@ -51,7 +55,8 @@ public interface Constants {
         String KEY_EMAIL_CODE_CONTENT = "key_email_code_content_";
         String KEY_EMAIL_SEND_ADDRESS = "key_email_send_address_";
         String KEY_TOKEN = "key_token_";
-        String COOKICE_TOKEN_EKY = "cookice_token_eky";
+        String COOKIE_TOKEN_EKY = "cookie_token_eky";
+        String KEY_COMMIT_TOKEN_RECORD = "key_commit_token_record_";
     }
 
     interface Settings {

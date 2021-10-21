@@ -17,8 +17,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/portal/web_size")
 public class WebSizePortalApi {
 
-    @Autowired
-    private ICategoryService categoryService;
 
     @Autowired
     private IFriendLinkService friendLinkService;
@@ -29,15 +27,6 @@ public class WebSizePortalApi {
     @Autowired
     private IWebsiteInfoService websiteInfoService;
 
-    /**
-     *获取文章分类
-     *
-     * @return
-     */
-    @GetMapping("/categorise")
-    public ResponseResult getCategorise(){
-        return categoryService.listCategories();
-    }
 
     /**
      *获取网站标题

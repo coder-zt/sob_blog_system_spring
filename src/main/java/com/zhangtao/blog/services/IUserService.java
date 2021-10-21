@@ -13,7 +13,7 @@ public interface IUserService {
 
     ResponseResult register(SobUser sobUser, String emailCode, String captchaCode, String captchaKey);
 
-    ResponseResult doLogin(SobUser sobUser, String captchaKey, String captcha);
+    ResponseResult doLogin(SobUser sobUser, String key, String captchaKey, String from);
 
     SobUser checkSobUser();
 

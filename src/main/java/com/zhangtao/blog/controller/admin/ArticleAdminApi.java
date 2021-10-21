@@ -1,5 +1,6 @@
 package com.zhangtao.blog.controller.admin;
 
+import com.zhangtao.blog.interceptor.CheckTooFrequentCommit;
 import com.zhangtao.blog.pojo.Article;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IArticleService;
@@ -24,6 +25,7 @@ public class ArticleAdminApi {
      * @param article
      * @return
      */
+    @CheckTooFrequentCommit
     @PreAuthorize("@permission.adminPermission()")
     @PostMapping
     public ResponseResult postArticle(@RequestBody Article article) {
@@ -48,6 +50,7 @@ public class ArticleAdminApi {
      * @param articleId
      * @return
      */
+    @CheckTooFrequentCommit
     @PreAuthorize("@permission.adminPermission()")
     @PutMapping("/{articleId}")
     public ResponseResult updateArticle(@PathVariable("articleId") String articleId, @RequestBody Article article) {

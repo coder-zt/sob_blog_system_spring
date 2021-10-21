@@ -1,5 +1,6 @@
 package com.zhangtao.blog.controller.admin;
 
+import com.zhangtao.blog.interceptor.CheckTooFrequentCommit;
 import com.zhangtao.blog.pojo.Category;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.ICategoryService;
@@ -23,6 +24,7 @@ public class CategoryAdminApi {
      * @param category
      * @return
      */
+    @CheckTooFrequentCommit
     @PreAuthorize("@permission.adminPermission()")
     @PostMapping
     public ResponseResult addCategory(@RequestBody Category category){
@@ -47,6 +49,7 @@ public class CategoryAdminApi {
      * @param categoryId
      * @return
      */
+    @CheckTooFrequentCommit
     @PreAuthorize("@permission.adminPermission()")
     @PutMapping("/{categoryId}")
     public ResponseResult updateCategory(@PathVariable("categoryId") String categoryId, @RequestBody Category category){
