@@ -26,8 +26,10 @@ public interface FriendLinkDao extends JpaRepository<FriendLink, String>, JpaSpe
      * @return
      */
     @Modifying
-    @Query(nativeQuery = true, value = "update `tb_friends` set `state` = 1 where `id` = ?;")
+    @Query(nativeQuery = true, value = "update `tb_friends` set `state` = 0 where `id` = ?;")
     int deleteFriendLinkByUpdateStatus(String friendLinkId);
+
+    int deleteById(String friendLinkId);
 
     @Query(nativeQuery = true, value = "select * from `tb_friends` where `state` = ?;")
     List<FriendLink> listFriendLinkByState(String s);

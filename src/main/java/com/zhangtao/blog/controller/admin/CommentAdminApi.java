@@ -37,8 +37,8 @@ public class CommentAdminApi {
      * @return
      */
     @PreAuthorize("@permission.adminPermission()")
-    @GetMapping("/list")
-    public ResponseResult listComment(@RequestParam("page") int page, @RequestParam("size") int size) {
+    @GetMapping("/list/{page}/{size}")
+    public ResponseResult listComment(@PathVariable("page") int page, @PathVariable("size") int size) {
         return commentService.listComments(page, size);
     }
 
@@ -52,5 +52,15 @@ public class CommentAdminApi {
     @PutMapping("/top/{commentId}")
     public ResponseResult topComment(@PathVariable("commentId") String commentId) {
         return commentService.topComment(commentId);
+    }
+
+    /**
+     * 获取评论总数
+     * @return
+     */
+    @PreAuthorize("@permission.adminPermission()")
+    @GetMapping("/count")
+    public  ResponseResult getCommentCount(){
+        return commentService.getCommentCount();
     }
 }

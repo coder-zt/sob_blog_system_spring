@@ -49,10 +49,10 @@ public class Article {
 	public String getLabel() {
 		//打散
 		if (label != null) {
-			if (!this.label.contains("_")) {
+			if (!this.label.contains("-")) {
 				this.labels.add(label);
 			}else{
-				String[] split = label.split("_");
+				String[] split = label.split("-");
 				List<String> strings = Arrays.asList(split);
 				this.labels.addAll(strings);
 			}
@@ -66,6 +66,9 @@ public class Article {
 
 	public void setLabels(List<String> labels) {
 		this.labels = labels;
+	}
+	public List<String>  getLabels() {
+		return this.labels;
 	}
 
 	public String getId() {
@@ -138,10 +141,6 @@ public class Article {
 
 	public void setSummary(String summary) {
 		this.summary = summary;
-	}
-
-	public String getLabels() {
-		return label;
 	}
 
 	public void setLabels(String label) {

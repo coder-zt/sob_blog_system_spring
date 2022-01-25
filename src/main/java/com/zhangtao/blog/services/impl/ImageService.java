@@ -6,9 +6,7 @@ import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IImageService;
 import com.zhangtao.blog.services.IUserService;
-import com.zhangtao.blog.utils.Constants;
-import com.zhangtao.blog.utils.IdWorker;
-import com.zhangtao.blog.utils.TextUtils;
+import com.zhangtao.blog.utils.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +24,8 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
 import java.io.File;
@@ -35,7 +35,6 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 
@@ -45,7 +44,6 @@ import java.util.Map;
 public class ImageService extends BaseService implements IImageService {
 
 
-    public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy_MM_dd");
 
     @Value("${blog.image.path}")
     private String imagePath;
@@ -70,10 +68,11 @@ public class ImageService extends BaseService implements IImageService {
      * ID|存储路径|url|原名称|用户ID|状态|创建日期|更新日期
      *
      * @param file
+     * @param original
      * @return
      */
     @Override
-    public ResponseResult uploadImage(MultipartFile file) {
+    public ResponseResult uploadImage(MultipartFile file, String original) {
         //判断文件是否为空
         if (file == null) {
             return ResponseResult.FAILED("图片不能为空");
@@ -100,7 +99,7 @@ public class ImageService extends BaseService implements IImageService {
         //创建图片创建保存文件夹
         //规则：配置目录/日期/类型/ID.类型
         long currentMillions = System.currentTimeMillis();
-        String currentDay = simpleDateFormat.format(currentMillions);
+        String currentDay = new SimpleDateFormat("yyyy_MM_dd").format(currentMillions);
         String dayPath = imagePath + File.separator + currentDay;
         File dayDirectory = new File(dayPath);
         //判断日期文件夹
@@ -130,6 +129,7 @@ public class ImageService extends BaseService implements IImageService {
             image.setPath(targetPath);
             String resultPath = currentMillions + "_" + targetName + "." + type;
             image.setUrl(resultPath);
+            image.setOriginal(original);
             image.setState("1");
             SobUser sobUser = userService.checkSobUser();
             log.info("sobuser id ====> " + sobUser.getId());
@@ -148,6 +148,8 @@ public class ImageService extends BaseService implements IImageService {
     }
 
     private String getType(String contentType, String originFileName) {
+        log.info("originFileName ===> " + originFileName);
+        log.info("contentType ===> " + contentType);
         if(Constants.ImageType.TYPE_PNG_WHIT_PREFIX.equals(contentType)
                 && originFileName.endsWith(Constants.ImageType.TYPE_PNG)){
             return Constants.ImageType.TYPE_PNG;
@@ -161,13 +163,18 @@ public class ImageService extends BaseService implements IImageService {
         return null;
     }
 
+    private final Object mLock = new Object();
+
     @Override
     public void viewImage(String imageId) throws IOException {
-
         log.info("imageId ===> " + imageId);
         String[] splits = imageId.split("_");
         long saveTime = Long.parseLong(splits[0]);
-        String dayPath = simpleDateFormat.format(saveTime);
+        String dayPath;
+//        synchronized (mLock){
+//            dayPath = simpleDateFormat.format(saveTime);
+//        }
+        dayPath = new SimpleDateFormat("yyyy_MM_dd").format(saveTime);
         String name = splits[1].replace("=",". ");
         log.info("name ===> " + name);
         String type = name.substring(name.length()-3);
@@ -183,7 +190,7 @@ public class ImageService extends BaseService implements IImageService {
             byte[] buff = new byte[1024];
             int len;
             while ((len = fis.read(buff)) != -1){
-                writer.write(buff);
+                writer.write(buff, 0, len);
             }
             writer.flush();
         } catch (IOException e) {
@@ -199,7 +206,8 @@ public class ImageService extends BaseService implements IImageService {
     }
 
     @Override
-    public ResponseResult listImages(int page, int size) {
+    public ResponseResult listImages(int page, int size, String original) {
+        log.info("original is " + original);
         //检查数据
         page = checkPage(page);
         size = checkSize(size);
@@ -213,7 +221,14 @@ public class ImageService extends BaseService implements IImageService {
             public Predicate toPredicate(Root<Image> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder cb) {
                 Predicate preUserId =cb.equal(root.get("userId").as(String.class), userID);
                 Predicate preState =cb.equal(root.get("state").as(String.class), "1");
-                return cb.and(preState, preUserId);
+                Predicate and = null;
+                if (!TextUtils.isEmpty(original)) {
+                    Predicate preOriginal =cb.equal(root.get("original").as(String.class), original);
+                    and = cb.and(preState, preUserId, preOriginal);
+                }else{
+                    and = cb.and(preState, preUserId);
+                }
+                return and;
             }
         }, pageable);
         return ResponseResult.SUCCESS("获取图片列表成功!").setData(all);
@@ -223,5 +238,33 @@ public class ImageService extends BaseService implements IImageService {
     public ResponseResult deleteImage(String imageId) {
         int result = imageDao.deleteImageByUpdateState(imageId);
         return getDeleteResult(result, "图片");
+    }
+
+    @Autowired
+    private RedisUtils redisUtils;
+    @Override
+    public void getQrCodeImage(String code) {
+        //检查code是否过期
+        String loginState = (String) redisUtils.get(Constants.User.KEY_PC_LOGIN_ID + code);
+        if (TextUtils.isEmpty(loginState)) {
+            // TODO: 2021/10/28 返回一张提示二维码过期图片 
+            return;
+        }
+        HttpServletResponse response = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        String servletPath = request.getServletPath();
+        StringBuffer requestURI = request.getRequestURL();
+        String originalDomain = requestURI.toString().replace(servletPath, "");
+        String content = originalDomain + Constants.APP_DOWNLOAD_URL + "====" + code;
+        log.info("content === " + content);
+        byte[] result = QrCodeUtils.encodeQRCode(content);
+        try {
+            response.setContentType("image/png");
+            ServletOutputStream outputStream = response.getOutputStream();
+            outputStream.write(result);
+            outputStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

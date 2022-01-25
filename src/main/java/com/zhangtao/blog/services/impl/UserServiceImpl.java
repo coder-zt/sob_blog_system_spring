@@ -1,9 +1,13 @@
 package com.zhangtao.blog.services.impl;
 
-import java.util.Date;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
@@ -16,25 +20,22 @@ import com.wf.captcha.base.Captcha;
 import com.zhangtao.blog.dao.RefreshTokenDao;
 import com.zhangtao.blog.dao.SettingsDao;
 import com.zhangtao.blog.dao.UserDao;
+import com.zhangtao.blog.dao.UserNoPasswordDao;
 import com.zhangtao.blog.pojo.RefreshToken;
 import com.zhangtao.blog.pojo.Settings;
 import com.zhangtao.blog.pojo.SobUser;
+import com.zhangtao.blog.pojo.SobUserNoPassword;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.responese.ResponseState;
 import com.zhangtao.blog.services.IUserService;
-import com.zhangtao.blog.utils.ClaimsUtils;
-import com.zhangtao.blog.utils.Constants;
-import com.zhangtao.blog.utils.CookieUtils;
-import com.zhangtao.blog.utils.IdWorker;
-import com.zhangtao.blog.utils.JwtUtil;
-import com.zhangtao.blog.utils.RedisUtils;
-import com.zhangtao.blog.utils.TextUtils;
+import com.zhangtao.blog.utils.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -58,6 +59,9 @@ public class UserServiceImpl extends BaseService implements IUserService {
 
     @Autowired
     private UserDao userDao;
+
+    @Autowired
+    private UserNoPasswordDao userNoPasswordDao;
 
     @Autowired
     private SettingsDao settingsDao;
@@ -88,7 +92,6 @@ public class UserServiceImpl extends BaseService implements IUserService {
 
     @Override
     public ResponseResult initManagerAccount(SobUser sobUser) {
-        //todo: 检查是否以初始化
         Settings managerInitState = settingsDao.findOneByKey(Constants.Settings.MANAGER_ACCOUNT_INIT_STATE);
         if (managerInitState != null) {
             return ResponseResult.FAILED("管理员账号已经初始化！");
@@ -144,38 +147,36 @@ public class UserServiceImpl extends BaseService implements IUserService {
     /**
      * 创建图灵验证码
      *
-     * @param captchaKey
      * @throws Exception
      */
     @Override
-    public void createCaptcha(String captchaKey) throws Exception {
-        if (TextUtils.isEmpty(captchaKey) || captchaKey.length() < 13) {
-            return;
+    public void createCaptcha() throws Exception {
+        String lastId = CookieUtils.getCookie(getRequest(), Constants.User.LAST_CAPTCHA_ID);
+        String key;
+        if(TextUtils.isEmpty(lastId)){
+            key = idWorker.nextId() + "";
+        }else{
+            key = lastId;
         }
-        long key;
-        try {
-            key = Long.parseLong(captchaKey);
-        } catch (Exception e) {
-            return;
-        }
-
         // 设置请求头为输出图片类型
         getResponse().setContentType("image/gif");
         getResponse().setHeader("Pragma", "No-cache");
         getResponse().setHeader("Cache-Control", "no-cache");
         getResponse().setDateHeader("Expires", 0);
+        int weight = 120;
+        int height = 40;
         int captchaType = random.nextInt(3);
         Captcha targetCaptcha = null;
         switch (captchaType) {
             case 0:
                 // 三个参数分别为宽、高、位数
-                targetCaptcha = new SpecCaptcha(200, 60, 5);
+                targetCaptcha = new SpecCaptcha(weight, height, 5);
                 break;
             case 1:// gif类型
-                targetCaptcha = new GifCaptcha(200, 60);
+                targetCaptcha = new GifCaptcha(weight, height);
                 break;
             case 2:// 算术类型
-                targetCaptcha = new ArithmeticCaptcha(200, 60);
+                targetCaptcha = new ArithmeticCaptcha(weight, height);
                 targetCaptcha.setLen(2);
                 String arithmeticStr = ((ArithmeticCaptcha) targetCaptcha).getArithmeticString();
                 log.info("ArithmeticCaptcha string is ===> " + arithmeticStr);
@@ -187,8 +188,10 @@ public class UserServiceImpl extends BaseService implements IUserService {
         targetCaptcha.setCharType(Captcha.TYPE_DEFAULT);
         String content = targetCaptcha.text().toLowerCase();
         log.info("captcha content ===> " + content);
+        log.info("captcha key ===> " + key);
+        CookieUtils.setUpCookie(getResponse(), Constants.User.LAST_CAPTCHA_ID, key);
         //保存到redis中
-        redisUtils.set(Constants.User.KEY_REDIS_CAPTCHA + key, content, 60 * 10);
+        redisUtils.set(Constants.User.KEY_REDIS_CAPTCHA + key, content, Constants.TimeValueInMillions.MINUTE);
         // 输出图片流
         targetCaptcha.out(getResponse().getOutputStream());
     }
@@ -206,7 +209,13 @@ public class UserServiceImpl extends BaseService implements IUserService {
      * @return
      */
     @Override
-    public ResponseResult sendEmail(String type, String emailAddress) {
+    public ResponseResult sendEmail(String type, String emailAddress,String captchaCode) {
+        //检查人类验证码是否正确
+        String captchaId = CookieUtils.getCookie(getRequest(),Constants.User.LAST_CAPTCHA_ID);
+        String captchaValue = (String) redisUtils.get(Constants.User.KEY_REDIS_CAPTCHA + captchaId);
+        if (captchaValue.equals(captchaId)) {
+            return ResponseResult.FAILED("人类验证码不正确.");
+        }
         if (TextUtils.isEmpty(emailAddress)) {
             return ResponseResult.FAILED("邮箱地址不可以为空!");
         }
@@ -227,13 +236,19 @@ public class UserServiceImpl extends BaseService implements IUserService {
         remoteAddress = remoteAddress.replaceAll(":", "_");
         log.info("sendEmail > ip ===> " + remoteAddress);
         //
-        Integer ipSendTime = (Integer)redisUtils.get(Constants.User.KEY_EMAIL_SEND_IP + remoteAddress);
-        if(ipSendTime != null && ipSendTime > 10){
-            return ResponseResult.FAILED("操作频繁!");
+        Integer o = (Integer) redisUtils.get(Constants.User.KEY_EMAIL_SEND_IP + remoteAddress);
+        int ipSendTime = 0;
+        if(o == null){
+            ipSendTime = 1;
+        }else{
+            ipSendTime  = o;
+        }
+        if(ipSendTime > 10){
+//            return ResponseResult.FAILED("操作频繁!");
         }
         Object hasSend = redisUtils.get(Constants.User.KEY_EMAIL_SEND_ADDRESS + emailAddress);
         if(hasSend != null){
-            return ResponseResult.FAILED("操作频繁!");
+//            return ResponseResult.FAILED("操作频繁!");
         }
         // 2、检查邮箱地址是否正确
         boolean isEmailAddressOk = TextUtils.isEmailAddressOk(emailAddress);
@@ -253,22 +268,17 @@ public class UserServiceImpl extends BaseService implements IUserService {
             return ResponseResult.FAILED("系统出错，请稍后重试");
         }
         // 4、做记录
-        if(ipSendTime == null){
-            ipSendTime = 0;
-        }
         ipSendTime++;
         //1个小时有效期
         redisUtils.set(Constants.User.KEY_EMAIL_SEND_IP + remoteAddress, ipSendTime, 60 * 60);
         redisUtils.set(Constants.User.KEY_EMAIL_SEND_ADDRESS + emailAddress, "true", 30);
         redisUtils.set(Constants.User.KEY_EMAIL_CODE_CONTENT + emailAddress, String.valueOf(code), 60 * 10);
+        log.info("返回发送邮件成功的结果");
         return ResponseResult.SUCCESS("操作成功!");
     }
 
     @Override
-    public ResponseResult register(SobUser sobUser, String emailCode, String captchaCode, String captchaKey) {
-        log.info("emailCode ===> " + emailCode);
-        log.info("captchaCode ===> " + captchaCode);
-        log.info("captchaKey ===> " + captchaKey);
+    public ResponseResult register(SobUser sobUser, String emailCode, String captchaCode) {
         //第一步：检查当前用户名是否已经注册
         String userName = sobUser.getUserName();
         if (TextUtils.isEmpty(userName)) {
@@ -303,6 +313,10 @@ public class UserServiceImpl extends BaseService implements IUserService {
             //正确，删除redis中的记录
             redisUtils.del(Constants.User.KEY_EMAIL_CODE_CONTENT + email);
         }
+        String captchaKey = CookieUtils.getCookie(getRequest(), Constants.User.LAST_CAPTCHA_ID);
+        if (TextUtils.isEmpty(captchaKey)) {
+            return ResponseResult.FAILED("找不到验证信息");
+        }
         //第五步：检查图灵验证码是否正确
         String captchaVerifyCode = (String)redisUtils.get(Constants.User.KEY_REDIS_CAPTCHA + captchaKey);
         if (TextUtils.isEmpty(captchaVerifyCode)) {
@@ -334,21 +348,29 @@ public class UserServiceImpl extends BaseService implements IUserService {
         //包括：注册IP,登录IP,角色,头像,创建时间,更新时间
         //第八步：保存到数据库中
         userDao.save(sobUser);
+        CookieUtils.deleteCookie(getResponse(),Constants.User.LAST_CAPTCHA_ID);
         //第九步：返回结果
         return ResponseResult.GET(ResponseState.REGISTER_SUCCESS);
     }
 
     @Override
-    public ResponseResult doLogin(SobUser sobUser, String captcha, String captchaKey, String from) {
-        if (TextUtils.isEmpty(from) || ( !Constants.FROM_MOBILE.equals(from) && !Constants.FROM_PC.equals(from))) {
+    public ResponseResult doLogin(SobUser sobUser, String captcha, String from) {
+        log.info("1 from is ===> " + from);
+        if (TextUtils.isEmpty(from) || (!Constants.FROM_MOBILE.equals(from) && !Constants.FROM_PC.equals(from))) {
             from = Constants.FROM_MOBILE;
         }
+        log.info("2 from is ===> " + from);
+        String captchaKey = CookieUtils.getCookie(getRequest(),Constants.User.LAST_CAPTCHA_ID);
+        log.info("doLogin captcha key 1 ===> " + captchaKey);
         //1. 判断图灵验证码是否正确
         String captchaValue = (String)redisUtils.get(Constants.User.KEY_REDIS_CAPTCHA + captchaKey);
-        if (TextUtils.isEmpty(captchaValue) || !captchaValue.equals(captcha)) {
+        log.info("doLogin captcha key 1-1 ===> " + captchaValue);
+        if (TextUtils.isEmpty(captchaValue) || !captchaValue.equals(captcha.toLowerCase())) {
             redisUtils.del(Constants.User.KEY_REDIS_CAPTCHA + captchaKey);
+            log.info("doLogin captcha key 1-2 ===> " + captchaValue);
             return ResponseResult.FAILED("人类验证码错误");
         }
+        log.info("doLogin captcha key 2 ===> " + captchaKey);
         redisUtils.del(Constants.User.KEY_REDIS_CAPTCHA + captchaKey);
         //2. 对用户信息判空
         String userName = sobUser.getUserName();
@@ -360,6 +382,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
             return ResponseResult.FAILED("密码不可以为空");
         }
         // 3. 查询用户信息
+        log.info(" 查询用户信息 ===》 " + userName);
         SobUser userFromDb = userDao.findOneByUserName(userName);
         if(userFromDb == null){
             userFromDb = userDao.findOneByEmail(userName);
@@ -368,6 +391,8 @@ public class UserServiceImpl extends BaseService implements IUserService {
             return ResponseResult.FAILED("找不到该用户信息");
         }
         // 4. 验证密码是否正确
+        log.info("password ===> " + password );
+        log.info("userFromDb.getPassword() ===> " + userFromDb.getPassword() );
         boolean matches = passwordEncoder.matches(password, userFromDb.getPassword());
         if(!matches){
             return ResponseResult.FAILED("用户名或密码错误");
@@ -379,14 +404,23 @@ public class UserServiceImpl extends BaseService implements IUserService {
         userFromDb.setLoginIp(getRequest().getRemoteAddr());
         userFromDb.setUpdateTime(new Date());
         createToken(userFromDb, from);
+        CookieUtils.deleteCookie(getResponse(),Constants.User.LAST_CAPTCHA_ID);
         return ResponseResult.SUCCESS("登录成功");
     }
 
     private String createToken(SobUser userFromDb, String from) {
-        String oldTokenKey = CookieUtils.getCookie(getRequest(),Constants.User.COOKIE_TOKEN_EKY);
+        String oldTokenKey = CookieUtils.getCookie(getRequest(),Constants.User.COOKIE_TOKEN_KEY);
+        RefreshToken oldRefreshToken = refreshTokenDao.findOneByUserId(userFromDb.getId());
         if(from.equals(Constants.FROM_MOBILE)){
+            if (oldRefreshToken != null) {
+                redisUtils.del(Constants.User.KEY_TOKEN + oldRefreshToken.getMobileTokenKey());
+            }
+            //确保单端，删除redis中的token
             refreshTokenDao.deleteMobileTokenKey(oldTokenKey);
         }else if(from.equals(Constants.FROM_PC)){
+            if (oldRefreshToken != null) {
+                redisUtils.del(Constants.User.KEY_TOKEN + oldRefreshToken.getTokenKey());
+            }
             refreshTokenDao.deletePcTokenKey(oldTokenKey);
         }
         // 6. 生成token（有效时常两个小时）
@@ -396,7 +430,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
         String tokenKey = from + DigestUtils.md5DigestAsHex(token.getBytes());
         redisUtils.set(Constants.User.KEY_TOKEN + tokenKey,token, Constants.TimeValueInSecond.HOUR_2);
         // 8. 设置cookie
-        CookieUtils.setUpCookie(getResponse(),  Constants.User.COOKIE_TOKEN_EKY,tokenKey);
+        CookieUtils.setUpCookie(getResponse(),  Constants.User.COOKIE_TOKEN_KEY,tokenKey);
         //更新数据库中的token
         RefreshToken refreshToken = refreshTokenDao.findOneByUserId(userFromDb.getId());
         if(refreshToken == null){
@@ -407,16 +441,17 @@ public class UserServiceImpl extends BaseService implements IUserService {
         }
         // 9. 创建RefreshToken
         String refreshTokenValue = JwtUtil.createRefreshToken(userFromDb.getId(), Constants.TimeValueInMillions.MONTH);
-        // TODO: 2021/10/8 保存到数据库
+        //保存到数据库
         // refreshToken、 tokenKey、 用户ID、 创建时间、 更新时间
-
-        if(Constants.FROM_MOBILE.equals(from)){
+        if(Constants.FROM_PC.equals(from)){
             refreshToken.setTokenKey(tokenKey);
         }else{
             refreshToken.setMobileTokenKey(tokenKey);
         }
         refreshToken.setRefreshToken(refreshTokenValue);
         refreshToken.setUpdateTime(new Date());
+        log.info("save user token is  pc " + refreshToken.getTokenKey());
+        log.info("save user token is mobile " + refreshToken.getMobileTokenKey());
         refreshTokenDao.save(refreshToken);
         return tokenKey;
     }
@@ -429,21 +464,26 @@ public class UserServiceImpl extends BaseService implements IUserService {
     @Override
     public SobUser checkSobUser() {
         //获取tokenKey
-        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_EKY);
+        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_KEY);
+        log.info("tokenKey ===> " + tokenKey);
         if (tokenKey == null) {
             return null;
         }
-        // TODO: 2021/10/21  从token中解析是什么端的
+        //从token中解析是什么端的
         SobUser sobUser = parseByTokenKey(tokenKey);
+        log.info("sobUser is null ===> " + String.valueOf(sobUser == null));
         String from = tokenKey.startsWith(Constants.FROM_PC)?Constants.FROM_PC:Constants.FROM_MOBILE;
         if (sobUser == null) {//登录已过期
             // 1.在mysql查询refreshToken
             RefreshToken refreshToken = null;
             if (Constants.FROM_PC.equals(from)) {
+                log.info("refreshToken is query with pc");
                 refreshToken = refreshTokenDao.findOneByTokenKey(tokenKey);
             }else{
+                log.info("refreshToken is query with mobile");
                 refreshToken = refreshTokenDao.findOneByMobileTokenKey(tokenKey);
             }
+            log.info("refreshToken is null ===> " + String.valueOf(refreshToken == null));
             if(refreshToken == null){// 2. 不存在证明用户没有登录小于要重新登录
                 return null;
             }
@@ -457,6 +497,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
                 return parseByTokenKey(newTokenKey);
             }catch (Exception e){
                 // 4. refreshToken也过期了
+                log.info("refreshToken也过期了");
                 return null;
             }
         }
@@ -521,7 +562,9 @@ public class UserServiceImpl extends BaseService implements IUserService {
         }
         //修改的属性：头像、签名、用户名
         String userName = sobUser.getUserName();
-        if (!TextUtils.isEmpty(userName)) {
+        log.info("userName ===> " + userName);
+        log.info("userFromDb userName ===> " + userFromDb.getUserName());
+        if (!TextUtils.isEmpty(userName) && !userName.equals(userFromDb.getUserName())) {
             SobUser userByUserName = userDao.findOneByUserName(userName);
             if(userByUserName != null){
                 return ResponseResult.FAILED("该用户名已注册");
@@ -535,7 +578,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
         userDao.save(userFromDb);
         //修改用户信息后，redis中的token的信息已经不正确了，所以需要删除token，下次请求就会重新生成新的token
         // 获取到当前权限所有的角色，进行角色对比即可确定权限
-        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_EKY);
+        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_KEY);
         redisUtils.del(Constants.User.KEY_TOKEN + tokenKey);
         return ResponseResult.SUCCESS("用户信息更新成功");
     }
@@ -560,7 +603,7 @@ public class UserServiceImpl extends BaseService implements IUserService {
     }
 
     @Override
-    public ResponseResult listUsers(int page, int size) {
+    public ResponseResult listUsers(int page, int size, String userName, String email) {
         if(page < Constants.Page.DEFAULT_PAGE){
             page = Constants.Page.DEFAULT_PAGE;
         }
@@ -570,7 +613,24 @@ public class UserServiceImpl extends BaseService implements IUserService {
         //开始查询用户数据
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
         Pageable pageable = new PageRequest(page - 1, size, sort);
-        Page<SobUser> all = userDao.findAll(pageable);
+        Page<SobUserNoPassword> all = userNoPasswordDao.findAll(new Specification<SobUserNoPassword>() {
+            @Override
+            public Predicate toPredicate(Root<SobUserNoPassword> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder cb) {
+                log.info("userName +   :" + userName);
+                List<Predicate> predicates = new ArrayList<>();
+                if(!TextUtils.isEmpty(userName)){
+                    Predicate preUser = cb.like(root.get("userName").as(String.class), "%" + userName + "%");
+                    predicates.add(preUser);
+                }
+                if(!TextUtils.isEmpty(email)){
+                    Predicate preEmail = cb.equal(root.get("email").as(String.class), email);
+                    predicates.add(preEmail);
+                }
+                Predicate[] preArray = new Predicate[predicates.size()];
+                predicates.toArray(preArray);
+                return cb.and(preArray);
+            }
+        }, pageable);
         return ResponseResult.SUCCESS("获取用户列表成功").setData(all);
     }
 
@@ -617,17 +677,128 @@ public class UserServiceImpl extends BaseService implements IUserService {
 
     @Override
     public ResponseResult doLogout() {
-        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_EKY);
+        String tokenKey = CookieUtils.getCookie(getRequest(), Constants.User.COOKIE_TOKEN_KEY);
         if (TextUtils.isEmpty(tokenKey)) {
             return ResponseResult.ACCOUNT_NOT_LOGIN();
         }
         //删除redis中的token
         redisUtils.del(Constants.User.KEY_TOKEN+tokenKey);
-        //删除mysql中的refreshToken
+        //修改mysql中对应客服端的refreshToken
+        if(tokenKey.startsWith(Constants.FROM_PC)){
+            refreshTokenDao.deletePcTokenKey(tokenKey);
+        }else{
+            refreshTokenDao.deleteMobileTokenKey(tokenKey);
+        }
         refreshTokenDao.deleteAllByTokenKey(tokenKey);
         //删除cookie中的tokenKey
-        CookieUtils.deleteCookie(getResponse(), Constants.User.COOKIE_TOKEN_EKY);
+        CookieUtils.deleteCookie(getResponse(), Constants.User.COOKIE_TOKEN_KEY);
         return ResponseResult.SUCCESS("退出登录成功.");
+    }
+
+    @Override
+    public ResponseResult getPcLoginQrCodeInfo() {
+        //1. 生成唯一的id
+        long code = idWorker.nextId();
+        //2. 将登录状态保存到redis
+        redisUtils.set(Constants.User.KEY_PC_LOGIN_ID + code,
+                Constants.User.KEY_PC_LOGIN_STATE_FALSE,
+                Constants.TimeValueInSecond.MINUTE_5);
+        //3.返回结果
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", String.valueOf(code));
+        result.put("url", "/portal/image/qr-code/" + code);
+        return ResponseResult.SUCCESS().setData(result);
+    }
+
+
+    @Autowired
+    private CountDownLatchManager countDownLatchManager;
+    /**
+     * 检查二维码登录状态
+     * @param loginId
+     * @return
+     */
+    @Override
+    public ResponseResult checkQrCodeLoginState(String loginId) {
+        ResponseResult checkSate = checkLoginState(loginId);
+        if (checkSate != null) return checkSate;
+        Callable<ResponseResult> callable = new Callable<ResponseResult>() {
+            @Override
+            public ResponseResult call() throws Exception {
+                //先阻塞
+                countDownLatchManager.getLatch(loginId).await(Constants.User.QR_CODE_CHECK_WAITING_TIME, TimeUnit.SECONDS);
+                log.info("start check login state ...");
+                ResponseResult checkSate = checkLoginState(loginId);
+                if (checkSate != null) return checkSate;
+                //超时返回得等待扫描
+                return ResponseResult.WAITING_FOR_SCAN();
+            }
+        };
+        try {
+            return callable.call();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return  ResponseResult.WAITING_FOR_SCAN();
+    }
+
+    @Override
+    public ResponseResult parseToken() {
+        SobUser sobUser = checkSobUser();
+        if(sobUser == null){
+            return ResponseResult.FAILED("用户未登录.");
+        }
+        return ResponseResult.SUCCESS("获取用户信息成功.").setData(sobUser);
+    }
+
+    @Override
+    public ResponseResult resetPassword(String userId, String password) {
+        //查询用户是否存在
+        SobUser userFormDd = userDao.findOneById(userId);
+        if(userFormDd == null){
+            return ResponseResult.FAILED("用户不存在.");
+        }
+        //密码加密
+        if(TextUtils.isEmpty(password)){
+            return ResponseResult.FAILED("重置密码不能为空 .");
+        }
+        userFormDd.setPassword(passwordEncoder.encode(password));
+        //处理结果
+        userDao.save(userFormDd);
+        return ResponseResult.SUCCESS("重置密码成功.");
+    }
+
+    @Override
+    public ResponseResult getRegisterCount() {
+        long count = userDao.count();
+        return ResponseResult.SUCCESS("用户总数获取成功.").setData(count);
+    }
+
+    @Override
+    public ResponseResult checkEmailCode(String email, String emailCode, String captchaCode) {
+        //检查人类验证码
+        String captchaId = CookieUtils.getCookie(getRequest(), Constants.User.LAST_CAPTCHA_ID);
+        String captcha = (String)redisUtils.get(Constants.User.KEY_REDIS_CAPTCHA + captchaId);
+        if(!captchaCode.equals(captcha)){
+            return ResponseResult.FAILED("人类验证码不正确");
+        }
+        //检查邮箱code
+        String emailContent = (String) redisUtils.get(Constants.User.KEY_EMAIL_CODE_CONTENT + email);
+        if(!emailCode.equals(emailContent)){
+            return ResponseResult.FAILED("邮箱验证码不正确");
+        }
+        return ResponseResult.SUCCESS("验证码正确");
+    }
+
+    private ResponseResult checkLoginState(String loginId) {
+        String loginState = (String) redisUtils.get(Constants.User.KEY_PC_LOGIN_ID + loginId);
+        if(Constants.User.KEY_PC_LOGIN_STATE_TRUE.equals(loginState)){
+            return ResponseResult.SUCCESS("登录成功");
+        }
+        if(loginState == null){
+            return  ResponseResult.QR_CODE_DEPRECATE();
+        }
+        return null;
     }
 
     /**

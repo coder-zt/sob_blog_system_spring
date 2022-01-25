@@ -7,6 +7,7 @@ public interface Constants {
 
     int DEFAULT_SIZE = 30;
 
+    String APP_DOWNLOAD_URL= "/boke.apk";
     /**
      * 单位：秒
      */
@@ -40,7 +41,7 @@ public interface Constants {
         String TYPE_JPG = "jpg";
         String TYPE_PNG = "png";
         String TYPE_GIF = "gif";
-        String TYPE_JPG_WHIT_PREFIX = PREFIX + TYPE_JPG;
+        String TYPE_JPG_WHIT_PREFIX = PREFIX + "jpeg";
         String TYPE_PNG_WHIT_PREFIX = PREFIX + TYPE_PNG;
         String TYPE_GIF_WHIT_PREFIX = PREFIX + TYPE_GIF;
     }
@@ -55,8 +56,13 @@ public interface Constants {
         String KEY_EMAIL_CODE_CONTENT = "key_email_code_content_";
         String KEY_EMAIL_SEND_ADDRESS = "key_email_send_address_";
         String KEY_TOKEN = "key_token_";
-        String COOKIE_TOKEN_EKY = "cookie_token_eky";
+        String COOKIE_TOKEN_KEY = "cookie_token_key";
         String KEY_COMMIT_TOKEN_RECORD = "key_commit_token_record_";
+        String KEY_PC_LOGIN_ID = "key_pc_login_id_";
+        String KEY_PC_LOGIN_STATE_FALSE = "false";
+        String LAST_CAPTCHA_ID = "l_c_i";
+        String KEY_PC_LOGIN_STATE_TRUE= "true";
+        long QR_CODE_CHECK_WAITING_TIME = 30;
     }
 
     interface Settings {
@@ -69,7 +75,7 @@ public interface Constants {
 
     interface Page {
         int DEFAULT_PAGE = 1;
-        int MINI_PAGE_SIZE = 10;
+        int MINI_PAGE_SIZE = 1;
     }
 
     interface Article {

@@ -40,7 +40,7 @@ public interface UserDao extends JpaRepository<SobUser, String>, JpaSpecificatio
      * @return
      */
     @Modifying
-    @Query(nativeQuery = true, value = "UPDATE `tb_user` SET `state` = `0` WHERE `id` = ?")
+    @Query(nativeQuery = true, value = "UPDATE `tb_user` SET `state` = 0 WHERE `id` = ?")
     int deleteUserById(String userId);
 
 

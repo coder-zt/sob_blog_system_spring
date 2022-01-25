@@ -7,13 +7,13 @@ public interface IUserService {
 
     ResponseResult initManagerAccount(SobUser sobUser);
 
-    void createCaptcha(String captchaKey) throws Exception;
+    void createCaptcha() throws Exception;
 
-    ResponseResult sendEmail(String type, String emailAddress);
+    ResponseResult sendEmail(String type, String emailAddress,String captchaCode);
 
-    ResponseResult register(SobUser sobUser, String emailCode, String captchaCode, String captchaKey);
+    ResponseResult register(SobUser sobUser, String emailCode, String captchaCode);
 
-    ResponseResult doLogin(SobUser sobUser, String key, String captchaKey, String from);
+    ResponseResult doLogin(SobUser sobUser, String key, String from);
 
     SobUser checkSobUser();
 
@@ -27,11 +27,23 @@ public interface IUserService {
 
     ResponseResult deleteUser(String userId);
 
-    ResponseResult listUsers(int page, int size);
+    ResponseResult listUsers(int page, int size,String userName, String email);
 
     ResponseResult updatePassword(String verifyCode, SobUser sobUser);
 
     ResponseResult updateEmail(String email, String verifyCode);
 
     ResponseResult doLogout();
+
+    ResponseResult getPcLoginQrCodeInfo();
+
+    ResponseResult checkQrCodeLoginState(String loginId);
+
+    ResponseResult parseToken();
+
+    ResponseResult resetPassword(String userId, String password);
+
+    ResponseResult getRegisterCount();
+
+    ResponseResult checkEmailCode(String email, String emailCode, String captchaCode);
 }

@@ -45,7 +45,8 @@ public class SolrServiceImpl extends BaseService implements ISolrService {
     private SolrClient solrClient;
 
     @Override
-    public ResponseResult doSearch(String keywords, int page, int size, String categoryId, Integer sort) {
+    public ResponseResult doSearch(String keywords, int page, int size, String categoryId, String sort) {
+        log.info("keywords=" + keywords);
         //1.检查page和size
         page = checkPage(page);
         size = checkSize(size);
@@ -67,14 +68,14 @@ public class SolrServiceImpl extends BaseService implements ISolrService {
         }
         //排序
         //排序有四种case：时间升序（1）降序（2），浏览量的升序（3）和降序（4）
-        if(sort != null){
-            if(sort == 1){
+        if(TextUtils.isEmpty(sort)){
+            if(sort.equals("1")){
                 solrQuery.setSort("blog_creat_time", SolrQuery.ORDER.asc);
-            } else if(sort == 2){
+            } else if(sort.equals("2")){
                 solrQuery.setSort("blog_creat_time", SolrQuery.ORDER.desc);
-            } else if(sort == 3){
+            } else if(sort.equals("3")){
                 solrQuery.setSort("blog_view_count", SolrQuery.ORDER.asc);
-            } else if(sort == 4){
+            } else if(sort.equals("4")){
                 solrQuery.setSort("blog_view_count", SolrQuery.ORDER.desc);
             }
         }
@@ -156,7 +157,7 @@ public class SolrServiceImpl extends BaseService implements ISolrService {
         doc.addField("blog_content", content);
         doc.addField("blog_labels", article.getLabel());
         doc.addField("blog_create_time", new Date());
-        doc.addField("blog_url","https://www.sunofbeach.net");
+        doc.addField("blog_url","article/" + article.getId());
         doc.addField("blog_category_id", article.getCategoryId());
         try{
             solrClient.add(doc);
@@ -167,9 +168,9 @@ public class SolrServiceImpl extends BaseService implements ISolrService {
     }
 
     @Override
-    public void deleteArticle(String artileId) {
+    public void deleteArticle(String articleId) {
         try{
-            solrClient.deleteById(artileId);
+            solrClient.deleteById(articleId);
             solrClient.commit();
         }catch (Exception e){
             e.printStackTrace();

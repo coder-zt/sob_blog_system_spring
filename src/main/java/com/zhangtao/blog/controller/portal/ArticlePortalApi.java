@@ -54,7 +54,7 @@ public class ArticlePortalApi {
      *
      * @return
      */
-    @GetMapping("/{articleId}}")
+    @GetMapping("/{articleId}")
     public ResponseResult getArticleDetail(@PathVariable("articleId")String articleId){
         return articleService.getArticleById(articleId);
     }

@@ -105,6 +105,8 @@ public class CategoryServiceImpl extends BaseService implements ICategoryService
             categoryFromDb.setDescription(category.getDescription());
         }
         categoryFromDb.setOrder(category.getOrder());
+        categoryFromDb.setStatus(category.getStatus());
+        categoryFromDb.setUpdateTime(new Date());
         //保存数据
         categoryDao.save(categoryFromDb);
         //返回结果

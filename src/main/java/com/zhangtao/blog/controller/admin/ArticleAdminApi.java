@@ -98,4 +98,15 @@ public class ArticleAdminApi {
 
         return articleService.topArticle(articleId);
     }
+
+    /**
+     * 获取用户量
+     *
+     * @return
+     */
+    @PreAuthorize("@permission.adminPermission()")
+    @GetMapping("/count")
+    public  ResponseResult getArticleCount(){
+        return articleService.getArticleCount();
+    }
 }

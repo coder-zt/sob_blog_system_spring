@@ -4,7 +4,6 @@ import java.util.Date;
 import java.util.List;
 
 import com.zhangtao.blog.dao.LoopDao;
-import com.zhangtao.blog.pojo.FriendLink;
 import com.zhangtao.blog.pojo.Looper;
 import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
@@ -15,9 +14,6 @@ import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.TextUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,7 +66,7 @@ public class LooperServiceImpl extends BaseService implements ILooperService {
         //查询
         List<Looper> all;
         if(sobUser == null || !Constants.User.ROLE_ADMIN.equals(sobUser.getRoles())){
-            all = loopDao.listFriendLinkByState("1");
+            all = loopDao.listLoopByState("1");
         }else{
             all = loopDao.findAll(sort);
         }
@@ -107,11 +103,8 @@ public class LooperServiceImpl extends BaseService implements ILooperService {
         if (!TextUtils.isEmpty(targetUrl)) {
             loopFromDb.setTargetUrl(targetUrl);
         }
-        String state = loopFromDb.getState();
-        if (!TextUtils.isEmpty(state)) {
-            loopFromDb.setState(state);
-        }
         loopFromDb.setOrder(loop.getOrder());
+        loopFromDb.setState(loop.getState());
         loopFromDb.setupdateTime(new Date());
         // 保存
         loopDao.save(loopFromDb);
@@ -121,7 +114,7 @@ public class LooperServiceImpl extends BaseService implements ILooperService {
 
     @Override
     public ResponseResult deleteLoop(String loopId) {
-        int result = loopDao.deleteByUpdateSatate(loopId);
+        int result = loopDao.deleteByUpdateState(loopId);
         return getDeleteResult(result,"轮播图");
     }
 

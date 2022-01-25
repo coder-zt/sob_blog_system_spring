@@ -8,10 +8,12 @@ import com.zhangtao.blog.utils.RedisUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.MultipartConfigFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
+import javax.servlet.MultipartConfigElement;
 import java.util.Random;
 
 @Slf4j
@@ -48,4 +50,21 @@ public class BlogApplication {
     public Gson createGson() {
         return new GsonBuilder().registerTypeAdapterFactory(HibernateProxyTypeAdapter.FACTORY).create();
     }
+
+    /**
+     * 配置上传文件大小的配置
+     *
+     * @return
+     */
+    @Bean
+    public MultipartConfigElement multipartConfigElement() {
+        MultipartConfigFactory factory = new MultipartConfigFactory();
+        //  设置单个文件大小
+        factory.setMaxFileSize("102400KB");//KB 或者 MB 都可以 1MB=1024KB。1KB=1024B(字节)
+        /// 设置总上传文件大小
+        factory.setMaxRequestSize("102400KB");//KB 或者 MB 都可以 1MB=1024KB。1KB=1024B(字节)
+        return factory.createMultipartConfig();
+    }
+
+
 }

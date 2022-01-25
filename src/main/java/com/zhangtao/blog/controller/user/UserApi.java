@@ -3,15 +3,13 @@ package com.zhangtao.blog.controller.user;
 import com.zhangtao.blog.pojo.SobUser;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IUserService;
+import com.zhangtao.blog.services.impl.SolrTestService;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * - 用户user
@@ -58,10 +56,9 @@ public class UserApi {
      */
     @PostMapping("/join_in")
     public ResponseResult register(@RequestBody SobUser sobUser,
-                                   @RequestParam("verify_code") String emailCode
-            , @RequestParam("captcha_code") String captchaCode,
-                                   @RequestParam("captcha_key") String captchaKey){
-        return userService.register(sobUser, emailCode, captchaCode, captchaKey);
+                                   @RequestParam("verify_code") String emailCode,
+                                   @RequestParam("captcha_code") String captchaCode){
+        return userService.register(sobUser, emailCode, captchaCode);
     }
 
     /**
@@ -73,16 +70,14 @@ public class UserApi {
      * 3. 图灵验证码
      * 4. 图灵验证码的key
      *
-     * @param captchaKey 图灵验证码key
      * @param captcha 图灵验证码
      * @param sobUser 用户信息
      * @return
      */
-    @PostMapping("/login/{captcha_key}/{captcha}")
-    public ResponseResult login(@PathVariable("captcha_key") String captchaKey,
-                                @PathVariable("captcha") String captcha,
+    @PostMapping("/login/{captcha}")
+    public ResponseResult login(@PathVariable("captcha") String captcha,
                                 @RequestBody SobUser sobUser, @RequestParam("from") String from){
-        return userService.doLogin(sobUser, captchaKey, captcha,from);
+        return userService.doLogin(sobUser, captcha, from);
     }
 
 
@@ -91,9 +86,9 @@ public class UserApi {
      * @return
      */
     @GetMapping("/captcha")
-    public void getCaptcha(@RequestParam("captcha_key") String captchaKey) {
+    public void getCaptcha() {
         try {
-            userService.createCaptcha(captchaKey);
+            userService.createCaptcha();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -110,9 +105,11 @@ public class UserApi {
      * @return
      */
     @GetMapping("/verify_code")
-    public ResponseResult sendVerifyCode(@RequestParam("type") String type, @RequestParam("email")  String emailAddress){
+    public ResponseResult sendVerifyCode(@RequestParam("type") String type,
+                                         @RequestParam("email")  String emailAddress,
+                                         @RequestParam("captchaCode")  String captchaCode){
         log.info("email address ===> " + emailAddress);
-        return userService.sendEmail(type, emailAddress);
+        return userService.sendEmail(type, emailAddress,captchaCode);
     }
 
     /**
@@ -139,7 +136,7 @@ public class UserApi {
      * @return
      */
     @PutMapping("/password")
-    public ResponseResult updatePassword(@RequestParam("verifyCode") String verifyCode, @RequestBody SobUser sobUser){
+    public ResponseResult updatePassword(@RequestParam("verify_code") String verifyCode, @RequestBody SobUser sobUser){
         return userService.updatePassword(verifyCode, sobUser);
     }
 
@@ -150,7 +147,7 @@ public class UserApi {
      * @param userId
      * @return
      */
-    @GetMapping("user_info/{userId}")
+    @GetMapping("info/{userId}")
     public ResponseResult getUserInfo(@PathVariable("userId") String userId){
         return  userService.getUserInfo(userId);
     }
@@ -181,8 +178,11 @@ public class UserApi {
      */
     @PreAuthorize("@permission.adminPermission()")
     @GetMapping("/list")
-    public ResponseResult listUsers(@RequestParam("page") int page, @RequestParam("size") int size){
-        return userService.listUsers(page, size);
+    public ResponseResult listUsers(@RequestParam("page") int page,
+                                    @RequestParam("size") int size,
+                                    @RequestParam(value = "userName", required = false) String userName,
+                                    @RequestParam(value = "email",required = false) String email){
+        return userService.listUsers(page, size, userName, email);
     }
 
     /**
@@ -269,5 +269,81 @@ public class UserApi {
     @GetMapping("/logout")
     public ResponseResult logout(){
         return userService.doLogout();
+    }
+
+
+    /**
+     * 获取二维码：
+     *  二维码的图片路径
+     *  二维码的内容字符串
+     * @return
+     */
+    @GetMapping("/pc-login-qr-code")
+    public ResponseResult getPcLoginQrCode(){
+        return userService.getPcLoginQrCodeInfo();
+    }
+
+
+    /**
+     * 检查二维码登录状态
+     * @param loginId
+     * @return
+     */
+    @GetMapping("/qr-code-state/{loginId}")
+    public ResponseResult checkQrCodeLoginState(@PathVariable("loginId") String loginId){
+        return userService.checkQrCodeLoginState(loginId);
+    }
+
+    @GetMapping("/check-token")
+    public ResponseResult parseToken(){
+        return userService.parseToken();
+    }
+
+
+    /**
+     * 重置用户密码
+     *
+     * @param userId
+     * @param password
+     * @return
+     */
+    @PreAuthorize("@permission.adminPermission()")
+    @PutMapping("/reset-password/{userId}")
+    public ResponseResult resetPassword(@PathVariable("userId")String userId, @RequestParam("password")String password){
+        return userService.resetPassword(userId, password);
+    }
+
+    /**
+     * 获取用户量
+     *
+     * @return
+     */
+    @PreAuthorize("@permission.adminPermission()")
+    @GetMapping("/count")
+    public  ResponseResult getRegisterCount(){
+        return userService.getRegisterCount();
+    }
+
+    @GetMapping("/check_email_code")
+    public ResponseResult checkEmailCode(@RequestParam("email") String email,
+                                         @RequestParam("email_code") String emailCode,
+                                         @RequestParam("captcha_code") String captchaCode){
+
+        return userService.checkEmailCode(email, emailCode, captchaCode);
+    }
+
+    @Autowired
+    private SolrTestService solrTestService;
+
+    @PostMapping("/solr/all")//http://localhost:2021/test/solr
+    public ResponseResult solrAddAllTest(){
+        solrTestService.importAll();
+        return ResponseResult.SUCCESS("测试成功");
+    }
+
+    @DeleteMapping("/solr/all")//http://localhost:2021/test/solr
+    public ResponseResult solrDeleteAllTest(){
+        solrTestService.deleteAll();
+        return ResponseResult.SUCCESS("测试删除成功");
     }
 }

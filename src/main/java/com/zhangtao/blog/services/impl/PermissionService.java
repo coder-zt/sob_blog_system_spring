@@ -24,7 +24,7 @@ public class PermissionService {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
         HttpServletResponse response = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
         //如果token返回false
-        String token = CookieUtils.getCookie(request, Constants.User.COOKIE_TOKEN_EKY);
+        String token = CookieUtils.getCookie(request, Constants.User.COOKIE_TOKEN_KEY);
         if (TextUtils.isEmpty(token)) {
             return false;
         }

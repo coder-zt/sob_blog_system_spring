@@ -5,7 +5,7 @@ import com.zhangtao.blog.responese.ResponseResult;
 
 public interface ISolrService {
 
-    ResponseResult doSearch(String keywords, int page, int size, String categoryId, Integer sort);
+    ResponseResult doSearch(String keywords, int page, int size, String categoryId, String sort);
 
     void addArticle(Article article);
 

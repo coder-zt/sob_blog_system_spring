@@ -1,5 +1,5 @@
 server:
-  port: 2021
+  port: 1111
 spring:
   application:
     name: blog-learn-demo
@@ -17,5 +17,6 @@ spring:
   data:
     solr:
       host: http://115.159.127.23:8983/solr/sob_blog_core
+
 blog.image.path: E:\\Coding\\Spring\\blogDemo\\images
-blog.image.max-size: 2097152 #2m
+blog.image.max-size: 8388608 #4m

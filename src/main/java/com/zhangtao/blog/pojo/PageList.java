@@ -29,7 +29,10 @@ public class PageList<T> implements Serializable {
         //29 == > 3
         //30 == > 3
         //31== > 4
-        this.totalPage = (long) (this.totalCount / (this.pageSize * 1.0f) + 0.9f);
+        this.totalPage = (long) (this.totalCount / this.pageSize);
+        if(this.totalCount % this.pageSize > 0){
+            this.totalPage++;
+        }
         //计算总的页数
         //是否第一页/是否最后一页
         //第一页为0，最后一页为总的页码

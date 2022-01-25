@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
  * 管理中心分类的api
  */
 @RestController
-@RequestMapping("/admin/looper")
+@RequestMapping("/admin/loop")
 public class LooperAdminApi {
 
     @Autowired
@@ -26,8 +26,8 @@ public class LooperAdminApi {
      */
     @CheckTooFrequentCommit
     @PostMapping
-    public ResponseResult addLooper(@RequestBody Looper looper) {
-        return looperService.addLooper(looper);
+    public ResponseResult addLooper(@RequestBody Looper loop) {
+        return looperService.addLooper(loop);
     }
 
     /**

@@ -4,6 +4,7 @@ import com.zhangtao.blog.interceptor.CheckTooFrequentCommit;
 import com.zhangtao.blog.responese.ResponseResult;
 import com.zhangtao.blog.services.IWebsiteInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -39,7 +40,8 @@ public class WebSizeInfoAdminApi {
         return websiteInfoService.putSeoInfo(keywords,description);
     }
 
-    @GetMapping
+    @PreAuthorize("@permission.adminPermission()")
+    @GetMapping("/view_count")
     public  ResponseResult getWebSizeViewCount(){
         return websiteInfoService.getWebsiteViewCount();
     }

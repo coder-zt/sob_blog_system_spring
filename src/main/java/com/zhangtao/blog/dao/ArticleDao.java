@@ -17,13 +17,13 @@ public interface ArticleDao extends JpaRepository<Article, String>, JpaSpecifica
      */
     Article findOneById(String articleId);
 
-    int deleteAllById(String articleId);
+    int deleteById(String articleId);
 
     @Modifying
-    @Query(nativeQuery = true, value = "update 'tb_article' set 'state' = `0` where `id` = ?;")
+    @Query(nativeQuery = true, value = "update `tb_article` set `state` = 0 where `id` = ?;")
     int deleteArticleByUpdateState(String articleId);
 
     @Modifying
-    @Query(nativeQuery = true, value = "update 'tb_article' set 'state' = `3` where `id` = ?;")
+    @Query(nativeQuery = true, value = "update `tb_article` set `state` = 3 where `id` = ?;")
     int topArticle(String articleId);
 }

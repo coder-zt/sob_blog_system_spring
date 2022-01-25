@@ -17,11 +17,11 @@ public interface RefreshTokenDao extends JpaRepository<RefreshToken, String>, Jp
     void deleteAllByTokenKey(String tokenKey);
 
     @Modifying
-    @Query(nativeQuery = true, value = "update `tb_resfresh_token` set `mobile_token_key` = '' where `mobile_token_key= ?`")
+    @Query(nativeQuery = true, value = "update `tb_refresh_token` set `mobile_token_key` = '' where `mobile_token_key`= ?")
     void deleteMobileTokenKey(String tokenKey);
 
     @Modifying
-    @Query(nativeQuery = true, value = "update `tb_resfresh_token` set `token_key` = '' where `token_key= ?`")
+    @Query(nativeQuery = true, value = "update `tb_refresh_token` set `token_key` = '' where `token_key`= ?")
     void deletePcTokenKey(String tokenKey);
 
     RefreshToken findOneByUserId(String userId);

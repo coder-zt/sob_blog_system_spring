@@ -28,7 +28,7 @@ public class SearchPortalApi {
                                    @RequestParam("page")int page,
                                    @RequestParam("size") int size,
                                    @RequestParam(value="categoryId", required = false) String categoryId,
-                                   @RequestParam(value="sort", required = false) Integer sort){
+                                   @RequestParam(value="sort", required = false) String sort){
         return solrService.doSearch(keywords, page, size, categoryId, sort);
     }
 

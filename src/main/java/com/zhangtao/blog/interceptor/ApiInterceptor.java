@@ -13,9 +13,7 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.soap.Text;
 import java.io.PrintWriter;
-import java.lang.reflect.Method;
 
 
 @Component
@@ -34,9 +32,11 @@ public class ApiInterceptor extends HandlerInterceptorAdapter {
             HandlerMethod handlerMethod = (HandlerMethod) handler;
             CheckTooFrequentCommit methodAnnotation = handlerMethod.getMethodAnnotation(CheckTooFrequentCommit.class);
             if (methodAnnotation != null) {
-                String tokenKey = CookieUtils.getCookie(request, Constants.User.COOKIE_TOKEN_EKY);
+                String tokenKey = CookieUtils.getCookie(request, Constants.User.COOKIE_TOKEN_KEY);
+                String methodName = handlerMethod.getMethod().getName();
                 if (!TextUtils.isEmpty(tokenKey)) {
-                    String hasCommit = (String)redisUtils.get(Constants.User.KEY_COMMIT_TOKEN_RECORD + tokenKey);
+                    String hasCommit =
+                        (String)redisUtils.get(Constants.User.KEY_COMMIT_TOKEN_RECORD + tokenKey + methodName);
                     if(!TextUtils.isEmpty(hasCommit)){
                         response.setCharacterEncoding("UTF-8");
                         response.setContentType("application/json");
@@ -46,7 +46,8 @@ public class ApiInterceptor extends HandlerInterceptorAdapter {
                         writer.flush();
                         return false;
                     }else{
-                        redisUtils.set(Constants.User.KEY_COMMIT_TOKEN_RECORD + tokenKey, "true", Constants.TimeValueInSecond.SECOND_10);
+                        redisUtils.set(Constants.User.KEY_COMMIT_TOKEN_RECORD + tokenKey + methodName, "true",
+                                Constants.TimeValueInSecond.SECOND_10);
                     }
                 }
             }

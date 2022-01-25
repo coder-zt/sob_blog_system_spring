@@ -41,6 +41,14 @@ public class ResponseResult {
         return new ResponseResult(ResponseState.ERROR_505);
     }
 
+    public static ResponseResult WAITING_FOR_SCAN(){
+        return new ResponseResult(ResponseState.WAITING_FOR_SCAN);
+    }
+
+    public static ResponseResult QR_CODE_DEPRECATE(){
+        return new ResponseResult(ResponseState.QR_CODE_DEPRECATE);
+    }
+
 
     public static ResponseResult GET(ResponseState state){
         return new ResponseResult(state);

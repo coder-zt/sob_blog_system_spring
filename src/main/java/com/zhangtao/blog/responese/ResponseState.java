@@ -11,6 +11,8 @@ public enum ResponseState {
     ERROR_404(4006, false, "页面丢失"),
     ERROR_504(4007, false, "系统繁忙，请稍后重试"),
     ERROR_505(4008, false, "访问方法错误"),
+    WAITING_FOR_SCAN(4009, false, "等待扫码"),
+    QR_CODE_DEPRECATE(4010, false, "二维码已过期"),
     ;
 
     int code;

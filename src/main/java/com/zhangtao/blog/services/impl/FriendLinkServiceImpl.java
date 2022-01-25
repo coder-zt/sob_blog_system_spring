@@ -85,7 +85,7 @@ public class FriendLinkServiceImpl extends BaseService implements IFriendLinkSer
 
     @Override
     public ResponseResult deleteFriendLink(String friendLinkId) {
-        int result = friendLinkDao.deleteFriendLinkByUpdateStatus(friendLinkId);
+        int result = friendLinkDao.deleteById(friendLinkId);
         return getDeleteResult(result, "友情链接");
     }
 
@@ -109,6 +109,10 @@ public class FriendLinkServiceImpl extends BaseService implements IFriendLinkSer
         String url = friendFlink.getUrl();
         if(!TextUtils.isEmpty(url)){
             friendLinkFromDb.setUrl(url);
+        }
+        String state = friendFlink.getState();
+        if(!TextUtils.isEmpty(state)){
+            friendLinkFromDb.setState(state);
         }
         //保存数据
         friendLinkDao.save(friendLinkFromDb);

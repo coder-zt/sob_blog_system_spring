@@ -15,7 +15,7 @@ public interface LoopDao extends JpaRepository<Looper, String>, JpaSpecification
     /**
      * 根据id查找轮播图
      * 
-     * @param looperId
+     * @param loopId
      * @return
      */
     Looper findOneById(String loopId);
@@ -27,9 +27,9 @@ public interface LoopDao extends JpaRepository<Looper, String>, JpaSpecification
      * @return
      */
     @Modifying
-    @Query(nativeQuery = true, value = "update `tb_looper` set `state` = `0` where `id` = ?")
-    int deleteByUpdateSatate(String loopId);
+    @Query(nativeQuery = true, value = "update `tb_looper` set `state` = 0 where `id` = ?")
+    int deleteByUpdateState(String loopId);
 
     @Query(nativeQuery = true, value = "select * from `tb_looper` where `state` = ?")
-    List<Looper> listFriendLinkByState(String state);
+    List<Looper> listLoopByState(String state);
 }

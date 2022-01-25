@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 
-public interface UserNoPaaswwrodDao extends JpaRepository<SobUserNoPassword, String>, JpaSpecificationExecutor<SobUserNoPassword> {
+public interface UserNoPasswordDao extends JpaRepository<SobUserNoPassword, String>, JpaSpecificationExecutor<SobUserNoPassword> {
 
     /**
      * 根据用户名查找用户信息

@@ -118,7 +118,7 @@ public class SolrTestService {
             doc.addField("blog_content", content);
             doc.addField("blog_labels", article.getLabel());
             doc.addField("blog_create_time", new Date());
-            doc.addField("blog_url","https://www.sunofbeach.net");
+            doc.addField("blog_url","article/" + article.getId());
             doc.addField("blog_category_id", article.getCategoryId());
             try{
                 solrClient.add(doc);

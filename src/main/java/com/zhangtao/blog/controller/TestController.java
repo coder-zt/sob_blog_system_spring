@@ -193,6 +193,7 @@ public class TestController {
         return ResponseResult.SUCCESS("测试删除成功");
     }
 
+
     @DeleteMapping("/solr/all")//http://localhost:2021/test/solr
     public ResponseResult solrDeleteAllTest(){
         solrTestService.deleteAll();

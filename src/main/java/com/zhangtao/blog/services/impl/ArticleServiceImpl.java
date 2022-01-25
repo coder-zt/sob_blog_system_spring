@@ -4,6 +4,14 @@ import java.util.*;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.vladsch.flexmark.ext.jekyll.tag.JekyllTagExtension;
+import com.vladsch.flexmark.ext.tables.TablesExtension;
+import com.vladsch.flexmark.ext.toc.SimTocExtension;
+import com.vladsch.flexmark.ext.toc.TocExtension;
+import com.vladsch.flexmark.html.HtmlRenderer;
+import com.vladsch.flexmark.parser.Parser;
+import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.data.MutableDataSet;
 import com.zhangtao.blog.dao.ArticleDao;
 import com.zhangtao.blog.dao.ArticleNoContentDao;
 import com.zhangtao.blog.dao.CommentDao;
@@ -18,6 +26,7 @@ import com.zhangtao.blog.utils.IdWorker;
 import com.zhangtao.blog.utils.RedisUtils;
 import com.zhangtao.blog.utils.TextUtils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +41,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
+@Slf4j
 @Service
 @Transactional
 public class ArticleServiceImpl extends BaseService implements IArticleService {
@@ -86,6 +96,7 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
      */
     @Override
     public ResponseResult postArticle(Article article) {
+        log.info("postArticle");
         // 检查用户，获取到用户对象
         SobUser sobUser = userService.checkSobUser();
         // 未登录
@@ -131,7 +142,7 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
             if (summary.length() > Constants.Article.SUMMARY_MAX_LENGTH) {
                 return ResponseResult.FAILED("摘要不可以超出" + Constants.Article.SUMMARY_MAX_LENGTH + "个字符.");
             }
-            String labels = article.getLabels();
+            String labels = article.getLabel();
             // 标签-标签1-标签2
             if (TextUtils.isEmpty(labels)) {
                 return ResponseResult.FAILED("标签不可以为空.");
@@ -171,9 +182,10 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
     }
 
     private void setupLabels(String labels) {
+        log.info("labels ===> " + labels);
         List<String> labelList = new ArrayList<>();
-        if(labels.contains("_")){
-            labelList.addAll(Arrays.asList(labels.split("_")));
+        if(labels.contains("-")){
+            labelList.addAll(Arrays.asList(labels.split("-")));
         }else{
             labelList.add(labels);
         }
@@ -186,6 +198,7 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
                 newLabel.setId(idWorker.nextId() + "");
                 newLabel.setCreateTime(new Date());
                 newLabel.setUpdateTime(new Date());
+                labelDao.save(newLabel);
             }else{
                 labelDao.updateLabelTime(new Date(), label);
             }
@@ -208,29 +221,39 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         //检查参数
         page = checkPage(page);
         size = checkSize(size);
-        if(page == 1){
+        boolean isSearch = !TextUtils.isEmpty(state + keyword + categoryId);
+        if(isSearch){
+            if(TextUtils.isEmpty(categoryId)){
+                redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + categoryId);
+            }
+            redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
+        }
+        if(page == 1 && !isSearch){
             String articleListJson = (String) redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + categoryId);
             if (!TextUtils.isEmpty(articleListJson)) {
                 PageList<ArticleNoContent> articleList = gson.fromJson(articleListJson,new TypeToken<PageList<ArticleNoContent>>() {}.getType());
-                return ResponseResult.SUCCESS("获取评论列表成功").setData(articleList);
+                return ResponseResult.SUCCESS("获取文章列表成功").setData(articleList);
             }
         }
         //创建查询条件
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
-        Pageable pageable = new PageRequest(page, size, sort);
+        Pageable pageable = new PageRequest(page - 1, size, sort);
         Page<ArticleNoContent> all = articleNoContentDao.findAll(new Specification<ArticleNoContent>() {
             @Override
             public Predicate toPredicate(Root<ArticleNoContent> root, CriteriaQuery<?> aq, CriteriaBuilder cb) {
                 List<Predicate> predicates = new ArrayList<>();
                 if (!TextUtils.isEmpty(state)) {
+                    log.info("state ===> " + state);
                     Predicate preState = cb.equal(root.get("state").as(String.class), state);
                     predicates.add(preState);
                 }
                 if (!TextUtils.isEmpty(keyword)) {
+                    log.info("keyword ===> " + keyword);
                     Predicate perKeyword = cb.like(root.get("title").as(String.class), "%" + keyword + "%");
                     predicates.add(perKeyword);
                 }
                 if (!TextUtils.isEmpty(categoryId)) {
+                    log.info("categoryId ===> " + categoryId);
                     Predicate preCategory = cb.equal(root.get("categoryId").as(String.class), categoryId);
                     predicates.add(preCategory);
                 }
@@ -239,9 +262,10 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
                 return cb.and(perArray);
             }
         }, pageable);
+        log.info("all ===> " + all.getContent());
         PageList<ArticleNoContent> result = new PageList<>();
         result.parsePage(all);
-        if(page == 1){
+        if(page == 1 && !isSearch){
             redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + categoryId, gson.toJson(result), Constants.TimeValueInSecond.MINUTE_5 );
         }
         //返回结果
@@ -251,12 +275,15 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
 
     @Override
     public ResponseResult getArticleById(String articleId) {
-        //从redis中获取文章
+//        //从redis中获取文章
         String articleJson = (String) redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId);
         if (!TextUtils.isEmpty(articleJson)) {
             Article article = gson.fromJson(articleJson, Article.class);
             //增加阅读量
-            redisUtils.incr(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, 1);
+            String newCount = (String)redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId);
+            long intCount = Long.parseLong(newCount) + 1;
+            redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, String.valueOf(intCount));
+            article.setViewCount(intCount);
             return ResponseResult.SUCCESS("获取文章成功.").setData(article);
         }
         Article article = articleDao.findOneById(articleId);
@@ -265,22 +292,50 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         }
         //普通用户只可以获取置顶、发表的文章
         if(Constants.Article.STATE_PUBLISH.equals(article.getState())
-        && Constants.Article.STATE_TOP.equals(article.getState())){
+        || Constants.Article.STATE_TOP.equals(article.getState())){
+            //处理文章内容
+            //markdown ->1 ->html
+            // 富文本 -> 0 ->纯文本
+            String html;
+            if(article.getType().equals(Constants.Article.TYPE_MARKDOWN)){
+                // markdown to html
+                MutableDataSet options  = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(
+                        TablesExtension.create(),
+                        JekyllTagExtension.create(),
+                        TocExtension.create(),
+                        SimTocExtension.create()
+                ));
+                Parser parser = Parser.builder(options).build();
+                HtmlRenderer renderer = HtmlRenderer.builder(options).build();
+                Node document = parser.parse(article.getContent());
+                html = renderer.render(document);
+            }else{
+                html = article.getContent();
+            }
+            //复制一份文章
+            String articleStr = gson.toJson(article);
+            Article newArticle = gson.fromJson(articleStr, Article.class);
+            newArticle.setContent(html);
+//            log.info("文章内容已处理： " + html);
             //正常访问
-            redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId, gson.toJson(article), Constants.TimeValueInSecond.MINUTE_5);
+            redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId, gson.toJson(newArticle), Constants.TimeValueInSecond.MINUTE_5);
             String viewCount = (String) redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId);
             if (TextUtils.isEmpty(viewCount)) {
                 long newViewCount = article.getViewCount() + 1;
                 redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, String.valueOf(newViewCount));
             }else{
                 //增加阅读量
-                long newCount = redisUtils.incr(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, 1);
-                article.setViewCount(newCount);
+                long newCount = (long)redisUtils.get(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId);
+                long intCount = newCount + 1;
+                redisUtils.set(Constants.Article.KEY_REDIS_ARTICLE_VIEW_COUNT + articleId, String.valueOf(intCount));
+                article.setViewCount(intCount);
                 articleDao.save(article);
                 //更新solr的阅读量
                 solrService.updateArticle(articleId, article);
             }
-            ResponseResult.SUCCESS("获取文章成功.").setData(article);
+//            log.info("文章内容已处理： " + newArticle.getContent());
+
+            return ResponseResult.SUCCESS("获取文章成功.").setData(newArticle);
         }
         //判断管理员身份
         SobUser sobUser = userService.checkSobUser();
@@ -309,23 +364,25 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         }
         String content = article.getContent();
         if (!TextUtils.isEmpty(content)) {
-            articleFormDb.setTitle(content);
+            articleFormDb.setContent(content);
         }
         String label = article.getLabel();
         if (!TextUtils.isEmpty(label)) {
-            articleFormDb.setTitle(label);
+            articleFormDb.setLabel(label);
         }
         String categoryId = article.getCategoryId();
         if (!TextUtils.isEmpty(categoryId)) {
-            articleFormDb.setTitle(categoryId);
+            articleFormDb.setCategoryId(categoryId);
         }
         String summary = article.getSummary();
         if (!TextUtils.isEmpty(summary)) {
-            articleFormDb.setTitle(summary);
+            articleFormDb.setSummary(summary);
         }
         articleFormDb.setCover(article.getCover());
+        articleFormDb.setState(article.getState());
         articleFormDb.setUpdateTime(new Date());
         articleDao.save(articleFormDb);
+        redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId);
         redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + article.getCategoryId());
         redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
         return ResponseResult.SUCCESS("文章更新成功.");
@@ -336,23 +393,36 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
 
     @Override
     public ResponseResult deleteArticle(String articleId) {
+        log.info("deleteArticle-删除文章");
         //删除文章的评论B
         commentDao.deleteAllByArticleId(articleId);
-        int result = articleDao.deleteAllById(articleId);
+        int result = articleDao.deleteById(articleId);
         if(result > 0){
+            Article articleFromDb = articleDao.findOneById(articleId);
             redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId);
             solrService.deleteArticle(articleId);
+            if (articleFromDb !=null && !TextUtils.isEmpty(articleFromDb.getCategoryId())) {
+                redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + articleFromDb.getCategoryId());
+            }
+            redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
         }
         return getDeleteResult(result, "文章");
     }
 
     @Override
     public ResponseResult deleteArticleByState(String articleId) {
+        log.info("deleteArticleByState-删除文章");
         int result = articleDao.deleteArticleByUpdateState(articleId);
         if (result>0) {
+            Article articleFromDb = articleDao.findOneById(articleId);
             redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_CACHE + articleId);
             solrService.deleteArticle(articleId);
+            if (!TextUtils.isEmpty(articleFromDb.getCategoryId())) {
+                redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + articleFromDb.getCategoryId());
+            }
+            redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
         }
+
         return getDeleteResult(result, "文章");
     }
 
@@ -364,9 +434,15 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
        }
        String state = articleFromDb.getState();
        if(Constants.Article.STATE_PUBLISH.equals(state)){
+           articleFromDb.setState(Constants.Article.STATE_TOP);
+           redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + articleFromDb.getCategoryId());
+           redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
            return ResponseResult.SUCCESS("文章置顶成功.");
        }
         if(Constants.Article.STATE_TOP.equals(state)){
+            articleFromDb.setState(Constants.Article.STATE_PUBLISH);
+            redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE + articleFromDb.getCategoryId());
+            redisUtils.del(Constants.Article.KEY_REDIS_ARTICLE_LIST_CACHE);
             return ResponseResult.SUCCESS("取消置顶成功.");
         }
         return ResponseResult.FAILED("置顶文章失败");
@@ -389,7 +465,7 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         if (articleFromDb == null) {
             return ResponseResult.FAILED("文章不存在");
         }
-        String labels = articleFromDb.getLabels();
+        String labels = articleFromDb.getLabel();
         List<String> articleLabels = new ArrayList<>();
         if(!labels.contains("-")){
             articleLabels.add(labels);
@@ -436,7 +512,13 @@ public class ArticleServiceImpl extends BaseService implements IArticleService {
         Sort sort = new Sort(Sort.Direction.DESC, "count");
         Pageable pageable = new PageRequest(0, size, sort);
         Page<Label> all = labelDao.findAll(pageable);
-        return ResponseResult.SUCCESS("获取标签云成功");
+        return ResponseResult.SUCCESS("获取标签云成功").setData(all);
+    }
+
+    @Override
+    public ResponseResult getArticleCount() {
+        long count = articleDao.count();
+        return ResponseResult.SUCCESS("文章总数获取成功.").setData(count);
     }
 
 }

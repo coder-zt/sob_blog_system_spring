@@ -22,8 +22,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 import javax.transaction.Transactional;
 import java.util.Date;
 import java.util.List;
@@ -71,6 +76,7 @@ public class CommentServiceImpl extends BaseService implements ICommentService {
         }
         //补全内容
         comment.setId(idWorker.nextId() + "");
+        comment.setState(Constants.Comment.STATE_PUBLISH);
         comment.setCreateTime(new Date());
         comment.setUpdateTime(new Date());
         comment.setUserAvatar(sobUser.getAvatar());
@@ -98,7 +104,12 @@ public class CommentServiceImpl extends BaseService implements ICommentService {
         //查询
         Sort sort = new Sort(Sort.Direction.DESC, "state","createTime");
         Pageable pageable = new PageRequest(page - 1, size, sort);
-        Page<Comment> all = commentDao.findAll(pageable);
+        Page<Comment> all = commentDao.findAll(new Specification<Comment>() {
+            @Override
+            public Predicate toPredicate(Root<Comment> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder cb) {
+                return cb.equal(root.get("state").as(String.class), "1");
+            }
+        }, pageable);
         PageList<Comment> result = new PageList<>();
         result.parsePage(all);
         if(page == 1){
@@ -121,6 +132,7 @@ public class CommentServiceImpl extends BaseService implements ICommentService {
         }
         if(sobUser.getId().equals(commentFromDb.getUserId()) ||
                 Constants.User.ROLE_ADMIN.equals(sobUser.getRoles())){
+            commentDao.deleteByUpdateState(commentId);
             return ResponseResult.SUCCESS("评论删除成功.");
         }
         return ResponseResult.PERMISSION_FORBID();
@@ -132,7 +144,7 @@ public class CommentServiceImpl extends BaseService implements ICommentService {
         page = checkPage(page);
         size = checkSize(size);
         Sort sort = new Sort(Sort.Direction.DESC, "createTime");
-        Pageable pageable = new PageRequest(page, size, sort);
+        Pageable pageable = new PageRequest(page - 1, size, sort);
         Page<Comment> all = commentDao.findAll(pageable);
         return ResponseResult.SUCCESS("获取评论列表成功").setData(all);
     }
@@ -145,12 +157,18 @@ public class CommentServiceImpl extends BaseService implements ICommentService {
         }
         if(commentFromDb.getState().equals(Constants.Comment.STATE_TOP)){
             commentFromDb.setState(Constants.Comment.STATE_PUBLISH);
-            return ResponseResult.FAILED("取消置顶成功.");
+            return ResponseResult.SUCCESS("取消置顶成功.");
         }else if(commentFromDb.getState().equals(Constants.Comment.STATE_PUBLISH)){
             commentFromDb.setState(Constants.Comment.STATE_TOP);
-            return ResponseResult.FAILED("评论置顶成功.");
+            return ResponseResult.SUCCESS("评论置顶成功.");
         }else{
             return ResponseResult.FAILED("评论状态非法.");
         }
+    }
+
+    @Override
+    public ResponseResult getCommentCount() {
+        long count = commentDao.count();
+        return ResponseResult.SUCCESS("评论总数获取成功.").setData(count);
     }
 }
